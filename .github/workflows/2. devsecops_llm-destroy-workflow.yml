@@ -54,12 +54,10 @@ jobs:
     
     - name: Terraform Init
       run: |
-        cd terraform
         terraform init
     
     - name: Terraform Destroy
       run: |
-        cd terraform
         echo "🚨 WARNING: This will permanently delete all AWS infrastructure!"
         echo "Destroying DevSecOps infrastructure..."
         terraform destroy -auto-approve

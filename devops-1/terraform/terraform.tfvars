@@ -1,0 +1,5 @@
+ami_id      = "ami-05a3b8c9c294ba4c7"
+vpc_id      = "vpc-048a7fb00bbad59d0"  # main-vpc로 태그된 VPC 사용
+subnet_ids  = []  # 서브넷은 VPC 생성 후 자동으로 생성됨
+db_password = "sajupass"
+public_key  = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDkPl9vthDoca7Ac10liL/YRv4GfSd1oswbF9u9t7HezWQER+hRPlZ1SE8WDHizd1uU6BPjaEM3+HfeTljinZIiXYh+rj9BtW3HEObGNucV9eRCyf8dTc5+l0nSJ1OivrdznOgpildXa/JLHO3zzdw8IMkACWV8GQNuUhMwKlHzwVhT56pmuuZs9YiRW4TQGved1+XMoLyr1C4sPkh0y3NpE65oAFOmhSLOngS8IW3S262EnRCOeyRMh1JiLd+iiGvs4QJHAIA8YGBVCdgYv4J/6dqGlMTRc1XJNdwciV5slLqq+XVPgbG6fsZ2IVwRcplS7sch2+wwsIHbv6FPUBdnWhOQSIRdSu7vRZIz1ZISX9FJX/AeJtltPmGokWfCCBnHLHvZsR5WaHNdHjQcFCCaRpvQ7lbkxlyE2oOEo/viFrrcdGUr3h3gT5ttNQ542/eT5pmPACekSFahrgK+66S4ho54xtI2YwCAD2D+/lbed/MKuu9hHDElTbW/LgC+jdl9kRdgym0RPqpcLhKJQoGVCW4eT0qIEHsfp9P5IeXKFWGr1B7l2OXgcgJxWZvebLeDxSeCHdW4/YDCWzeCOHmL04goavtSjOvDBZ9ty+CVjp203wH3BpxkVVEfSscodZEyNnc0CRr0EVHhkOdunXnKxVwolV3xOEzWwx8aYwi7fw== junheo@JUNui-MacBookPro.local"

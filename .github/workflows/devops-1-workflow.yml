@@ -42,6 +42,29 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
     
+    - name: Debug 파일 구조
+      run: |
+        echo "🏷️ 현재 작업 디렉터리: $(pwd)"
+        echo "📂 리포지토리 구조 전체:"
+        ls -la
+        echo ""
+        echo "📁 devops-1 폴더 확인:"
+        if [ -d "devops-1" ]; then
+          ls -la devops-1/
+          echo ""
+          echo "📁 devops-1/terraform 폴더 확인:"
+          if [ -d "devops-1/terraform" ]; then
+            ls -la devops-1/terraform/
+          else
+            echo "❌ devops-1/terraform 폴더가 없습니다!"
+          fi
+        else
+          echo "❌ devops-1 폴더가 없습니다!"
+        fi
+        echo ""
+        echo "🔍 .tf 파일 검색:"
+        find . -name "*.tf" -type f 2>/dev/null || echo "No .tf files found"
+    
     - name: Terraform Format Check
       working-directory: ./devops-1/terraform
       run: terraform fmt -check -recursive

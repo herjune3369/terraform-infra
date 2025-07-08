@@ -57,25 +57,37 @@ jobs:
       run: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.48.0
     
-    - name: Run Security Scan
+    - name: Run Trivy Security Scan
       run: |
         if [ "${{ github.event.inputs.scan_type }}" = "image" ]; then
-          python generate_security_report.py --image ${{ github.event.inputs.target || 'nginx:latest' }}
+          echo "🔍 Trivy: Scanning container image: ${{ github.event.inputs.target || 'nginx:latest' }}"
+          trivy image ${{ github.event.inputs.target || 'nginx:latest' }} --format json --output trivy-image-results.json
+          trivy image ${{ github.event.inputs.target || 'nginx:latest' }} --format table --output trivy-image-report.txt
         elif [ "${{ github.event.inputs.scan_type }}" = "code" ]; then
-          python generate_security_report.py --scan-type code --path ${{ github.event.inputs.target || '.' }}
+          echo "🔍 Trivy: Scanning code directory: ${{ github.event.inputs.target || '.' }}"
+          trivy fs ${{ github.event.inputs.target || '.' }} --format json --output trivy-fs-results.json
+          trivy fs ${{ github.event.inputs.target || '.' }} --format table --output trivy-fs-report.txt
         else
-          python generate_security_report.py
+          echo "🔍 Trivy: Running comprehensive security scan"
+          trivy fs . --format json --output trivy-comprehensive-results.json
+          trivy fs . --format table --output trivy-comprehensive-report.txt
         fi
     
-    - name: Upload Security Report
+    - name: Upload Trivy Security Reports
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: security-report
+        name: trivy-security-reports
         path: |
-          ./2. devsecops_llm/trivy-security-report.md
-          ./2. devsecops_llm/*.json
+          ./2. devsecops_llm/trivy-*-results.json
+          ./2. devsecops_llm/trivy-*-report.txt
         retention-days: 30
+    
+    - name: Upload Trivy results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: './2. devsecops_llm/trivy-*-results.json'
 
   validate-infrastructure:
     name: Validate Infrastructure Code
@@ -192,7 +204,7 @@ jobs:
         ANSIBLE_HOST_KEY_CHECKING: False
 
   generate-report:
-    name: Generate Security Report
+    name: Generate Trivy Security Report
     runs-on: ubuntu-latest
     needs: [security-scan, deploy-application]
     if: always()
@@ -204,30 +216,49 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Download Security Report
+    - name: Download Trivy Reports
       uses: actions/download-artifact@v4
       with:
-        name: security-report
+        name: trivy-security-reports
         path: ./2. devsecops_llm
     
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: Generate Final Report
+    - name: Generate Trivy Summary Report
       run: |
-        if [ -f "generate_security_report.py" ]; then
-          python generate_security_report.py --generate-report
+        echo "# Trivy Security Scan Report" > trivy-summary-report.md
+        echo "Generated on: $(date)" >> trivy-summary-report.md
+        echo "" >> trivy-summary-report.md
+        echo "## Scan Results" >> trivy-summary-report.md
+        echo "" >> trivy-summary-report.md
+        
+        # Add image scan results if exists
+        if [ -f "trivy-image-report.txt" ]; then
+          echo "### Container Image Scan Results" >> trivy-summary-report.md
+          cat trivy-image-report.txt >> trivy-summary-report.md
+          echo "" >> trivy-summary-report.md
+        fi
+        
+        # Add filesystem scan results if exists
+        if [ -f "trivy-fs-report.txt" ]; then
+          echo "### Filesystem Scan Results" >> trivy-summary-report.md
+          cat trivy-fs-report.txt >> trivy-summary-report.md
+          echo "" >> trivy-summary-report.md
+        fi
+        
+        # Add comprehensive scan results if exists
+        if [ -f "trivy-comprehensive-report.txt" ]; then
+          echo "### Comprehensive Scan Results" >> trivy-summary-report.md
+          cat trivy-comprehensive-report.txt >> trivy-summary-report.md
+          echo "" >> trivy-summary-report.md
         fi
     
-    - name: Upload Final Report
+    - name: Upload Final Trivy Report
       uses: actions/upload-artifact@v4
       with:
-        name: final-security-report
+        name: final-trivy-report
         path: |
-          ./2. devsecops_llm/trivy-security-report.md
-          ./2. devsecops_llm/*.json
+          ./2. devsecops_llm/trivy-summary-report.md
+          ./2. devsecops_llm/trivy-*-results.json
+          ./2. devsecops_llm/trivy-*-report.txt
         retention-days: 90
 
   notify:
@@ -237,26 +268,26 @@ jobs:
     if: always()
     
     steps:
-    - name: Download Final Report
+    - name: Download Final Trivy Report
       uses: actions/download-artifact@v4
       with:
-        name: final-security-report
+        name: final-trivy-report
         path: ./reports
     
     - name: Notify on Success
       if: needs.generate-report.result == 'success'
       run: |
-        echo "✅ DevSecOps security scan completed successfully!"
+        echo "✅ Trivy security scan completed successfully!"
         echo "Scan type: ${{ github.event.inputs.scan_type || 'full' }}"
         echo "Target: ${{ github.event.inputs.target || 'default' }}"
-        if [ -f "./reports/trivy-security-report.md" ]; then
-          echo "Security report generated successfully"
+        if [ -f "./reports/trivy-summary-report.md" ]; then
+          echo "Trivy security report generated successfully"
         fi
     
     - name: Notify on Failure
       if: needs.generate-report.result == 'failure'
       run: |
-        echo "❌ DevSecOps security scan failed!"
+        echo "❌ Trivy security scan failed!"
         echo "Scan type: ${{ github.event.inputs.scan_type || 'full' }}"
         echo "Target: ${{ github.event.inputs.target || 'default' }}"
         exit 1 

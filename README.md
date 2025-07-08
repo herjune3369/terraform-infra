@@ -71,25 +71,31 @@
 ## 🔒 프로젝트 2: DevSecOps Security Scanner
 
 ### 📊 프로젝트 정보
-- **목적**: 보안 취약점 스캔 및 LLM 기반 보안 리포트 생성
-- **기술 스택**: Trivy, Python, Terraform, Ansible, LLM
+- **목적**: Trivy를 통한 보안 취약점 스캔 및 자동화된 보안 리포트 생성
+- **기술 스택**: Trivy, Terraform, Ansible, GitHub Actions
 - **상태**: ![DevSecOps Workflow](https://github.com/herjune3369/terraform-infra/workflows/DevSecOps%20Security%20Scanner/badge.svg)
 
 ### 🛠️ 주요 기능
-- 🔍 **Trivy 보안 스캔**: 컨테이너 이미지 및 코드 취약점 검사
-- 🤖 **LLM 분석**: AI 기반 보안 리포트 자동 생성
-- 📊 **보안 리포트**: 상세한 취약점 분석 및 해결책 제시
+- 🔍 **Trivy 보안 스캔**: 컨테이너 이미지 및 파일시스템 취약점 검사
+- 📊 **자동화된 리포트**: JSON 및 테이블 형식의 보안 리포트 생성
 - 🚀 **자동화된 배포**: 보안 스캐너 인프라 자동 구축
 - 📈 **실시간 모니터링**: GitHub Actions 기반 상태 추적
+- 🔒 **GitHub Security 통합**: 자동 보안 취약점 감지 및 알림
 
 ### 📁 프로젝트 구조
 ```
 2. devsecops_llm/
-├── generate_security_report.py  # 메인 스캔 스크립트
-├── requirements.txt             # Python 의존성
-├── terraform/                   # 보안 인프라
-├── ansible/                     # 스캐너 배포
-└── README.md                    # 프로젝트 문서
+├── terraform/                   # Terraform 설정
+│   ├── main.tf                 # AWS 인프라 정의
+│   ├── variables.tf            # 변수 정의
+│   └── outputs.tf              # 출력 값
+├── ansible/                     # Ansible 플레이북
+│   ├── playbook.yml            # 배포 플레이북
+│   ├── inventories/            # 인벤토리 파일
+│   └── roles/                  # Ansible 역할
+├── README.md                    # 프로젝트 문서
+├── SECURITY.md                  # 보안 정책
+└── .trivyignore                # Trivy 제외 파일 목록
 ```
 
 ### 🎮 실행 방법
@@ -111,8 +117,8 @@
 
 ### 🔒 Security & Monitoring
 - **Trivy**: Vulnerability Scanner
-- **Python**: Security Scripting
-- **LLM**: AI-powered Analysis
+- **GitHub Security**: Automated Security Scanning
+- **Security Reports**: Automated Report Generation
 
 ### 🐳 Container & Runtime
 - **Docker**: Containerization
@@ -176,9 +182,10 @@ git push origin main
 
 ### 🎯 기술적 도전과제 해결
 - **복잡한 인프라 자동화**: Terraform + Ansible 조합으로 해결
-- **보안 취약점 관리**: Trivy + LLM 조합으로 자동화
+- **보안 취약점 관리**: Trivy를 통한 자동화된 보안 스캔
 - **배포 프로세스 표준화**: GitHub Actions로 완전 자동화
 - **환경별 설정 관리**: 변수 기반 환경 분리
+- **보안 리포트 자동화**: JSON 및 테이블 형식의 자동 리포트 생성
 
 ---
 

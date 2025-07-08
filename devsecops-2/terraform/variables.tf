@@ -21,7 +21,7 @@ variable "subnet_ids" {
 
 
 variable "db_password" {
-  type      = string
+  type = string
   sensitive = true
 }
 

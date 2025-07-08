@@ -1,0 +1,42 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Ansible
+*.retry
+ansible/terraform_outputs.json
+
+# Security scan results (Trivy only)
+*.sarif
+trivy-security-report.md
+trivy-*.sarif
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# SSH keys
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+env/
+ENV/

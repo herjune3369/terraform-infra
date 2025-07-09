@@ -160,10 +160,11 @@ jobs:
       with:
         python-version: '3.9'
     
-    - name: Install Ansible
+    - name: Install Ansible and AWS plugins
       run: |
         python -m pip install --upgrade pip
         pip install ansible boto3
+        ansible-galaxy collection install amazon.aws
     
     - name: Setup Terraform for outputs
       uses: hashicorp/setup-terraform@v3
@@ -186,30 +187,16 @@ jobs:
         eval "$(ssh-agent -s)"
         ssh-add ~/.ssh/saju_app_key
     
-    - name: Generate static inventory
+    - name: Debug AWS EC2 inventory
       working-directory: ./devops-1/ansible
       run: |
-        # Extract IP addresses from terraform outputs
-        WEB1_IP=$(jq -r '.web1_public_ip.value' terraform_outputs.json)
-        WEB2_IP=$(jq -r '.web2_public_ip.value' terraform_outputs.json)
-        
-        # Create static inventory
-        cat > inventories/static_inventory.ini << EOF
-        [web]
-        webserver1 ansible_host=\$WEB1_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/saju_app_key
-        webserver2 ansible_host=\$WEB2_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/saju_app_key
-        
-        [webservers]
-        webserver1
-        webserver2
-        EOF
-        
-        echo "✅ Static inventory generated:"
-        cat inventories/static_inventory.ini
+        echo "🔍 Testing AWS EC2 inventory..."
+        ansible-inventory -i inventories/aws_ec2.yml --list
+        echo "✅ AWS EC2 inventory test completed"
     
     - name: Deploy with Ansible
       working-directory: ./devops-1/ansible
-      run: ansible-playbook -i inventories/static_inventory.ini playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}"
+      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}"
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
 

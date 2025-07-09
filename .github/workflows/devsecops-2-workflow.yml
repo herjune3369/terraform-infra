@@ -118,12 +118,12 @@ jobs:
           path: .
       - name: Generate AI Security Report
         run: |
-          python3 generate_security_report.py
+          python3 devsecops-2/generate_security_report.py
       - name: Upload AI Security Report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-ai-security-report
-          path: trivy-security-report.md
+          path: devsecops-2/trivy-security-report.md
       - name: Generate Final AI Summary
         run: |
           echo "## 🤖 AI Security Scan Complete" >> $GITHUB_STEP_SUMMARY

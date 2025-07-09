@@ -1,5 +1,5 @@
 - name: Deploy Flask App with RDS connection
-  hosts: web
+  hosts: aws_ec2
   become: true
   pre_tasks:
     - name: Load terraform outputs

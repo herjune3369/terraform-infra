@@ -3,7 +3,8 @@ regions:
   - ap-northeast-2
 
 filters:
-  tag-key: Name
+  instance-state-name: running
+  tag:Name: webserver*
 
 keyed_groups:
   - key: tags.Name
@@ -15,5 +16,5 @@ hostnames:
 
 compose:
   ansible_host: public_ip_address
-  ansible_user: '"ubuntu"'
-  ansible_ssh_private_key_file: '"/Users/junheo/.ssh/saju_app_key"'
+  ansible_user: ubuntu
+  ansible_ssh_private_key_file: "~/.ssh/saju_key"

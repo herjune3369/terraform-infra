@@ -9,9 +9,9 @@ data "aws_vpc" "existing_vpc" {
 
 # 서브넷 생성
 resource "aws_subnet" "public_subnet_a" {
-  vpc_id     = data.aws_vpc.existing_vpc.id
-  cidr_block = "10.0.1.0/24"
-  availability_zone = "ap-northeast-2a"
+  vpc_id                  = data.aws_vpc.existing_vpc.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "ap-northeast-2a"
   map_public_ip_on_launch = true
 
   tags = {
@@ -20,9 +20,9 @@ resource "aws_subnet" "public_subnet_a" {
 }
 
 resource "aws_subnet" "public_subnet_b" {
-  vpc_id     = data.aws_vpc.existing_vpc.id
-  cidr_block = "10.0.2.0/24"
-  availability_zone = "ap-northeast-2b"
+  vpc_id                  = data.aws_vpc.existing_vpc.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "ap-northeast-2b"
   map_public_ip_on_launch = true
 
   tags = {
@@ -31,8 +31,8 @@ resource "aws_subnet" "public_subnet_b" {
 }
 
 resource "aws_subnet" "private_subnet_c" {
-  vpc_id     = data.aws_vpc.existing_vpc.id
-  cidr_block = "10.0.3.0/24"
+  vpc_id            = data.aws_vpc.existing_vpc.id
+  cidr_block        = "10.0.3.0/24"
   availability_zone = "ap-northeast-2c"
 
   tags = {
@@ -41,8 +41,8 @@ resource "aws_subnet" "private_subnet_c" {
 }
 
 resource "aws_subnet" "private_subnet_b" {
-  vpc_id     = data.aws_vpc.existing_vpc.id
-  cidr_block = "10.0.4.0/24"
+  vpc_id            = data.aws_vpc.existing_vpc.id
+  cidr_block        = "10.0.4.0/24"
   availability_zone = "ap-northeast-2b"
 
   tags = {
@@ -208,21 +208,21 @@ resource "aws_security_group" "rds_sg" {
 
 # RDS 설정
 resource "aws_db_instance" "flask_db" {
-  identifier           = "flask-db"
-  engine              = "mysql"
-  engine_version      = "8.0"
-  instance_class      = "db.t3.micro"
-  allocated_storage   = 20
-  storage_type        = "gp2"
-  db_name             = "saju"
-  username            = "admin"
-  password            = var.db_password
-  skip_final_snapshot = true
-  multi_az           = false
+  identifier              = "flask-db"
+  engine                  = "mysql"
+  engine_version          = "8.0"
+  instance_class          = "db.t3.micro"
+  allocated_storage       = 20
+  storage_type            = "gp2"
+  db_name                 = "saju"
+  username                = "admin"
+  password                = var.db_password
+  skip_final_snapshot     = true
+  multi_az                = false
   backup_retention_period = 0
 
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name  = aws_db_subnet_group.rds_subnet_group.name
+  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
 
   tags = {
     Name = "flask-db"
@@ -238,12 +238,12 @@ resource "aws_key_pair" "app_key" {
 
 # EC2 인스턴스 설정
 resource "aws_instance" "web1" {
-  ami           = var.ami_id
-  instance_type = "t3.micro"
-  subnet_id     = aws_subnet.public_subnet_a.id
-  vpc_security_group_ids = [aws_security_group.web_sg.id]
+  ami                         = var.ami_id
+  instance_type               = "t3.micro"
+  subnet_id                   = aws_subnet.public_subnet_a.id
+  vpc_security_group_ids      = [aws_security_group.web_sg.id]
   associate_public_ip_address = true
-  key_name      = aws_key_pair.app_key.key_name
+  key_name                    = aws_key_pair.app_key.key_name
 
   tags = {
     Name = "webserver1"
@@ -251,12 +251,12 @@ resource "aws_instance" "web1" {
 }
 
 resource "aws_instance" "web2" {
-  ami           = var.ami_id
-  instance_type = "t3.micro"
-  subnet_id     = aws_subnet.public_subnet_b.id
-  vpc_security_group_ids = [aws_security_group.web_sg.id]
+  ami                         = var.ami_id
+  instance_type               = "t3.micro"
+  subnet_id                   = aws_subnet.public_subnet_b.id
+  vpc_security_group_ids      = [aws_security_group.web_sg.id]
   associate_public_ip_address = true
-  key_name      = aws_key_pair.app_key.key_name
+  key_name                    = aws_key_pair.app_key.key_name
 
   tags = {
     Name = "webserver2"
@@ -269,7 +269,7 @@ resource "aws_lb" "app_lb" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
-  subnets           = [aws_subnet.public_subnet_a.id, aws_subnet.public_subnet_b.id]
+  subnets            = [aws_subnet.public_subnet_a.id, aws_subnet.public_subnet_b.id]
 
   tags = {
     Name = "app-lb"

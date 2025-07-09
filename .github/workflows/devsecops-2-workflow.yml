@@ -54,6 +54,9 @@ jobs:
   trivy-iac-scan:
     name: Trivy IaC Scan
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./devsecops-2
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -65,7 +68,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'config'
-          scan-ref: 'devsecops-2/terraform/'
+          scan-ref: 'terraform/'
           format: 'sarif'
           output: 'trivy-iac-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'

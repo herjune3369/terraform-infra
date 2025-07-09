@@ -34,7 +34,7 @@ jobs:
     needs: [validate-destroy]
     defaults:
       run:
-        working-directory: ./2. devsecops_llm
+        working-directory: ./devsecops-2
     
     steps:
     - name: Checkout code

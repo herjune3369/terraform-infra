@@ -186,6 +186,17 @@ jobs:
         chmod 600 ~/.ssh/saju_app_key
         eval "$(ssh-agent -s)"
         ssh-add ~/.ssh/saju_app_key
+        echo "SSH key setup completed"
+        ls -la ~/.ssh/
+        ssh-add -l
+        echo "SSH key content (first 50 chars):"
+        head -c 50 ~/.ssh/saju_app_key
+        echo ""
+        echo "SSH key file size:"
+        wc -c ~/.ssh/saju_app_key
+        echo ""
+        echo "Testing SSH key format:"
+        ssh-keygen -l -f ~/.ssh/saju_app_key || echo "SSH key format check failed"
     
     - name: Debug AWS EC2 inventory
       working-directory: ./devops-1/ansible
@@ -193,10 +204,16 @@ jobs:
         echo "🔍 Testing AWS EC2 inventory..."
         ansible-inventory -i inventories/aws_ec2.yml --list
         echo "✅ AWS EC2 inventory test completed"
+        
+        echo "🔍 Testing SSH connection to webserver1..."
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_app_key -v ubuntu@43.201.46.184 "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
+        
+        echo "🔍 Testing SSH connection to webserver2..."
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_app_key -v ubuntu@43.202.158.58 "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
     
     - name: Deploy with Ansible
       working-directory: ./devops-1/ansible
-      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}"
+      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}" --private-key ~/.ssh/saju_app_key
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
 

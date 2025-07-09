@@ -289,8 +289,8 @@ def main():
     print("🔍 Trivy 보안 스캔 결과를 분석하고 AI 보고서를 생성합니다...")
     
     # Trivy 스캔 결과 파싱
-    trivy_fs_results = parse_sarif_file("trivy-results.sarif")
-    trivy_iac_results = parse_sarif_file("trivy-iac-results.sarif")
+    trivy_fs_results = parse_sarif_file("../trivy-results.sarif")
+    trivy_iac_results = parse_sarif_file("../trivy-iac-results.sarif")
     
     # AI 기반 보고서 생성
     report_content = generate_ai_report(trivy_fs_results, trivy_iac_results)

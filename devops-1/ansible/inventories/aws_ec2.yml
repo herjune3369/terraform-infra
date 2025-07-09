@@ -16,5 +16,6 @@ hostnames:
 
 compose:
   ansible_host: public_ip_address
-  ansible_user: '"ubuntu"'
-  ansible_ssh_private_key_file: '"~/.ssh/github_actions_key"'
+  ansible_user: >-
+    {% if 'amzn' in platform_details|lower or 'amazon' in platform_details|lower %}ec2-user{% else %}ubuntu{% endif %}
+  ansible_ssh_private_key_file: "~/.ssh/github_actions_key"

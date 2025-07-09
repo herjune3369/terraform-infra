@@ -69,8 +69,8 @@ jobs:
           trivy fs ${{ github.event.inputs.target || '.' }} --format table --output trivy-fs-report.txt
         else
           echo "🔍 Trivy: Running comprehensive security scan"
-          trivy fs . --format json --output trivy-comprehensive-results.json
-          trivy fs . --format table --output trivy-comprehensive-report.txt
+          trivy config ./terraform/ --format json --output trivy-comprehensive-results.json
+          trivy config ./terraform/ --format table --output trivy-comprehensive-report.txt
         fi
     
     - name: Upload Trivy Security Reports

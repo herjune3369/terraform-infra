@@ -182,10 +182,10 @@ jobs:
       working-directory: ./devops-1/ansible
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github_actions_key
-        chmod 600 ~/.ssh/github_actions_key
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/saju_key
+        chmod 600 ~/.ssh/saju_key
         eval "$(ssh-agent -s)"
-        ssh-add ~/.ssh/github_actions_key
+        ssh-add ~/.ssh/saju_key
         echo "SSH key setup completed"
         ls -la ~/.ssh/
         ssh-add -l
@@ -198,14 +198,14 @@ jobs:
         echo "✅ AWS EC2 inventory test completed"
         
         echo "🔍 Testing SSH connection to webserver1..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/github_actions_key -v ubuntu@43.201.46.184 "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ec2-user@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver1" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
         
         echo "🔍 Testing SSH connection to webserver2..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/github_actions_key -v ubuntu@43.202.158.58 "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ec2-user@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver2" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
     
     - name: Deploy with Ansible
       working-directory: ./devops-1/ansible
-      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}" --private-key ~/.ssh/github_actions_key
+      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}" --private-key ~/.ssh/saju_key
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
 

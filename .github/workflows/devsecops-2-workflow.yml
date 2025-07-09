@@ -25,7 +25,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
-          scan-ref: '.'
+          scan-ref: 'devsecops-2'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
@@ -139,6 +139,8 @@ jobs:
           echo "- 🤖 AI Security Report (trivy-security-report.md)" >> $GITHUB_STEP_SUMMARY
           echo "- GitHub Security Tab" >> $GITHUB_STEP_SUMMARY
           echo "- Workflow Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Trivy FS Results: trivy-results.sarif" >> $GITHUB_STEP_SUMMARY
+          echo "- Trivy IaC Results: trivy-iac-results.sarif" >> $GITHUB_STEP_SUMMARY
 
   validate-infrastructure:
     name: Validate Infrastructure Code

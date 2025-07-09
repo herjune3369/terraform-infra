@@ -96,9 +96,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [trivy-fs-scan, trivy-iac-scan]
     if: needs.trivy-fs-scan.result == 'success' && needs.trivy-iac-scan.result == 'success'
-    defaults:
-      run:
-        working-directory: ./devsecops-2
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -116,18 +113,15 @@ jobs:
         with:
           name: trivy-iac-results
           path: .
-      - name: Copy Trivy results to working directory
-        run: |
-          cp trivy-results.sarif devsecops-2/
-          cp trivy-iac-results.sarif devsecops-2/
       - name: Generate AI Security Report
         run: |
+          cd devsecops-2
           python3 generate_security_report.py
       - name: Upload AI Security Report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-ai-security-report
-          path: trivy-security-report.md
+          path: devsecops-2/trivy-security-report.md
       - name: Generate Final AI Summary
         run: |
           echo "## 🤖 AI Security Scan Complete" >> $GITHUB_STEP_SUMMARY

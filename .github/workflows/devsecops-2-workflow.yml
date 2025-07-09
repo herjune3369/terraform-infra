@@ -75,7 +75,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'config'
-          path: 'devsecops-2/terraform'
+          scan-ref: 'devsecops-2/terraform'
           format: 'sarif'
           output: 'trivy-iac-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
@@ -127,7 +127,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: trivy-ai-security-report
-          path: devsecops-2/trivy-security-report.md
+          path: trivy-security-report.md
       - name: Generate Final AI Summary
         run: |
           echo "## 🤖 AI Security Scan Complete" >> $GITHUB_STEP_SUMMARY

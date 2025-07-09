@@ -64,11 +64,21 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+      - name: Debug Workspace Structure
+        run: |
+          echo "Current working directory:"
+          pwd
+          echo "Workspace structure:"
+          ls -la
+          echo "devsecops-2 directory structure:"
+          ls -la devsecops-2/
+          echo "terraform directory structure:"
+          ls -la devsecops-2/terraform/
       - name: Run Trivy for Infrastructure as Code
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'config'
-          scan-ref: 'terraform/'
+          scan-ref: 'devsecops-2/terraform/'
           format: 'sarif'
           output: 'trivy-iac-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'

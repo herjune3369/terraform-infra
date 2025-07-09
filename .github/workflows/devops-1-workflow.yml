@@ -198,10 +198,10 @@ jobs:
         echo "✅ AWS EC2 inventory test completed"
         
         echo "🔍 Testing SSH connection to webserver1..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ec2-user@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver1" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ubuntu@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver1" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
         
         echo "🔍 Testing SSH connection to webserver2..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ec2-user@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver2" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ubuntu@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver2" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
     
     - name: Deploy with Ansible
       working-directory: ./devops-1/ansible

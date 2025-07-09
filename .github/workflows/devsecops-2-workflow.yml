@@ -123,9 +123,14 @@ jobs:
           ls -la devsecops-2/
           echo "Looking for generate_security_report.py:"
           find . -name "generate_security_report.py" -type f
+      - name: Copy Trivy results to devsecops-2 directory
+        run: |
+          cp trivy-results.sarif devsecops-2/
+          cp trivy-iac-results.sarif devsecops-2/
       - name: Generate AI Security Report
         run: |
-          python3 devsecops-2/generate_security_report.py
+          cd devsecops-2
+          python3 generate_security_report.py
       - name: Upload AI Security Report
         uses: actions/upload-artifact@v4
         with:

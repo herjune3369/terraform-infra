@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - '1. devops/**'
+      - 'devops-1/**'
   pull_request:
     branches: [ main ]
     paths:
-      - '1. devops/**'
+      - 'devops-1/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./1. devops
+        working-directory: ./devops-1
     
     steps:
     - name: Checkout code
@@ -99,7 +99,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
-        working-directory: ./1. devops
+        working-directory: ./devops-1
     
     steps:
     - name: Checkout code
@@ -142,7 +142,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
-        working-directory: ./1. devops
+        working-directory: ./devops-1
     
     steps:
     - name: Checkout code

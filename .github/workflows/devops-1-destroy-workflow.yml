@@ -34,7 +34,7 @@ jobs:
     needs: [validate-destroy]
     defaults:
       run:
-        working-directory: ./1. devops
+        working-directory: ./devops-1
     
     steps:
     - name: Checkout code

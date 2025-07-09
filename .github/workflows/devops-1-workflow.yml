@@ -178,32 +178,15 @@ jobs:
         terraform output -json > ../ansible/terraform_outputs.json
         echo "✅ Terraform outputs generated"
     
-    - name: Setup SSH key using EC2 Instance Connect
+    - name: Setup SSH key
       working-directory: ./devops-1/ansible
       run: |
-        # Generate a new SSH key pair for this session
-        ssh-keygen -t rsa -b 4096 -f ~/.ssh/temp_key -N "" -C "github-actions"
-        
-        # Send public key to EC2 instances using EC2 Instance Connect
-        aws ec2-instance-connect send-ssh-public-key \
-          --instance-id i-0f305c21983019008 \
-          --availability-zone ap-northeast-2a \
-          --instance-os-user ubuntu \
-          --ssh-public-key file://~/.ssh/temp_key.pub \
-          --region ap-northeast-2
-        
-        aws ec2-instance-connect send-ssh-public-key \
-          --instance-id i-07890465f2908b3a7 \
-          --availability-zone ap-northeast-2b \
-          --instance-os-user ubuntu \
-          --ssh-public-key file://~/.ssh/temp_key.pub \
-          --region ap-northeast-2
-        
-        # Set up SSH agent
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github_actions_key
+        chmod 600 ~/.ssh/github_actions_key
         eval "$(ssh-agent -s)"
-        ssh-add ~/.ssh/temp_key
-        
-        echo "EC2 Instance Connect SSH key setup completed"
+        ssh-add ~/.ssh/github_actions_key
+        echo "SSH key setup completed"
         ls -la ~/.ssh/
         ssh-add -l
     
@@ -215,14 +198,14 @@ jobs:
         echo "✅ AWS EC2 inventory test completed"
         
         echo "🔍 Testing SSH connection to webserver1..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/temp_key -v ubuntu@43.201.46.184 "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/github_actions_key -v ubuntu@43.201.46.184 "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
         
         echo "🔍 Testing SSH connection to webserver2..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/temp_key -v ubuntu@43.202.158.58 "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/github_actions_key -v ubuntu@43.202.158.58 "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
     
     - name: Deploy with Ansible
       working-directory: ./devops-1/ansible
-      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}" --private-key ~/.ssh/temp_key
+      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}" --private-key ~/.ssh/github_actions_key
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
 

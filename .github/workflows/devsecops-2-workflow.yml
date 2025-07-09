@@ -78,7 +78,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'config'
-          scan-ref: 'devsecops-2/terraform/'
+          scan-ref: 'terraform/'
           format: 'sarif'
           output: 'trivy-iac-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'

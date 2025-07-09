@@ -54,9 +54,6 @@ jobs:
   trivy-iac-scan:
     name: Trivy IaC Scan
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./devsecops-2
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -78,7 +75,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'config'
-          scan-ref: 'terraform/'
+          scan-ref: 'devsecops-2/terraform/'
           format: 'sarif'
           output: 'trivy-iac-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
@@ -103,6 +100,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [trivy-fs-scan, trivy-iac-scan]
     if: needs.trivy-fs-scan.result == 'success' && needs.trivy-iac-scan.result == 'success'
+    defaults:
+      run:
+        working-directory: ./devsecops-2
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -127,7 +127,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: trivy-ai-security-report
-          path: trivy-security-report.md
+          path: devsecops-2/trivy-security-report.md
       - name: Generate Final AI Summary
         run: |
           echo "## 🤖 AI Security Scan Complete" >> $GITHUB_STEP_SUMMARY

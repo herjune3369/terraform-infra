@@ -230,6 +230,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/saju_key
+          chmod 600 ~/.ssh/saju_key
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/saju_key
+          echo "SSH key setup completed"
+          ls -la ~/.ssh/
+          ssh-add -l
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:

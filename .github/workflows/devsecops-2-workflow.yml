@@ -7,14 +7,8 @@ permissions:
 on:
   push:
     branches: [ main, develop ]
-    paths:
-      - 'devsecops-2/**'
-      - 'terraform/**'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'devsecops-2/**'
-      - 'terraform/**'
 
 env:
   AWS_REGION: ap-northeast-2

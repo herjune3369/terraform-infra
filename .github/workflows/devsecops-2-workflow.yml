@@ -7,8 +7,14 @@ permissions:
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'devsecops-2/**'
+      - 'terraform/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'devsecops-2/**'
+      - 'terraform/**'
 
 env:
   AWS_REGION: ap-northeast-2
@@ -218,9 +224,6 @@ jobs:
             chmod +x save_outputs.sh
             ./save_outputs.sh
           fi
-      - name: Generate Terraform outputs for Ansible
-        run: |
-          terraform output -json > ../devsecops-2/ansible/terraform_outputs.json
   deploy-application:
     name: Deploy Security Scanner Application
     runs-on: ubuntu-latest
@@ -228,20 +231,10 @@ jobs:
     if: needs.deploy-infrastructure.result == 'success'
     defaults:
       run:
-        working-directory: ./devsecops-2/ansible
+        working-directory: ./devsecops-2
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/saju_key
-          chmod 600 ~/.ssh/saju_key
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/saju_key
-          echo "SSH key setup completed"
-          ls -la ~/.ssh/
-          ssh-add -l
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -256,12 +249,35 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ansible boto3
+      - name: Setup Terraform for outputs
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: Generate Terraform outputs
+        working-directory: ./terraform
+        run: |
+          terraform init
+          terraform output -json > ../devsecops-2/ansible/terraform_outputs.json
+          echo "✅ Terraform outputs generated"
+      - name: Setup SSH key
+        working-directory: ./devsecops-2/ansible
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/saju_key
+          chmod 600 ~/.ssh/saju_key
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/saju_key
+          echo "SSH key setup completed"
+          ls -la ~/.ssh/
+          ssh-add -l
       - name: Check terraform_outputs.json exists
+        working-directory: ./devsecops-2/ansible
         run: |
           ls -l terraform_outputs.json
           cat terraform_outputs.json
       - name: Deploy with Ansible
-        run: ansible-playbook -i devsecops-2/ansible/inventories/aws_ec2.yml devsecops-2/ansible/playbook.yml
+        working-directory: ./devsecops-2/ansible
+        run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml
         env:
           ANSIBLE_HOST_KEY_CHECKING: False
 

@@ -233,7 +233,7 @@ jobs:
     if: needs.deploy-infrastructure.result == 'success'
     defaults:
       run:
-        working-directory: ./devsecops-2
+        working-directory: ./devsecops-2/ansible
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -265,11 +265,8 @@ jobs:
         run: |
           ls -l terraform_outputs.json
           cat terraform_outputs.json
-        working-directory: ./devsecops-2/ansible
       - name: Deploy with Ansible
-        run: |
-          cd ansible
-          ansible-playbook -i inventories/aws_ec2.yml playbook.yml
+        run: ansible-playbook -i devsecops-2/ansible/inventories/aws_ec2.yml devsecops-2/ansible/playbook.yml
         env:
           ANSIBLE_HOST_KEY_CHECKING: False
 

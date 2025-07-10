@@ -221,6 +221,10 @@ jobs:
       - name: Generate Terraform outputs for Ansible
         run: |
           terraform output -json > ../devsecops-2/ansible/terraform_outputs.json
+      - name: Debug: List files after output
+        run: |
+          ls -l ../devsecops-2/ansible/
+        working-directory: ./terraform
 
   deploy-application:
     name: Deploy Security Scanner Application

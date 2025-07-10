@@ -257,6 +257,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ansible boto3
+      - name: Check terraform_outputs.json exists
+        run: |
+          ls -l terraform_outputs.json
+          cat terraform_outputs.json
+        working-directory: ./devsecops-2/ansible
       - name: Deploy with Ansible
         run: |
           cd ansible

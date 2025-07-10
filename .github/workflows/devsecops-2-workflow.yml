@@ -218,6 +218,9 @@ jobs:
             chmod +x save_outputs.sh
             ./save_outputs.sh
           fi
+      - name: Generate Terraform outputs for Ansible
+        run: |
+          terraform output -json > ../devsecops-2/ansible/terraform_outputs.json
 
   deploy-application:
     name: Deploy Security Scanner Application

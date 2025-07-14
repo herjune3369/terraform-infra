@@ -56,6 +56,7 @@ jobs:
       run: |
         BACKEND_CONFIG=$(terraform output -json backend_config)
         echo "backend_config=$BACKEND_CONFIG" >> $GITHUB_OUTPUT
+        echo "Backend config generated: $BACKEND_CONFIG"
 
   terraform:
     name: Terraform Main Infrastructure
@@ -84,9 +85,15 @@ jobs:
     - name: Cleanup old terraform state
       run: rm -rf .terraform terraform.tfstate* tfplan
 
+    - name: Wait for backend resources
+      run: |
+        echo "Waiting for backend resources to be ready..."
+        sleep 30
+
     - name: Terraform Init with S3 Backend
       run: |
         BACKEND_CONFIG='${{ needs.terraform-backend.outputs.backend-config }}'
+        echo "Backend config: $BACKEND_CONFIG"
         terraform init \
           -backend-config="bucket=$(echo $BACKEND_CONFIG | jq -r '.bucket')" \
           -backend-config="key=$(echo $BACKEND_CONFIG | jq -r '.key')" \

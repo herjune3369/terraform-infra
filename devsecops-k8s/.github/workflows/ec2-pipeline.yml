@@ -38,15 +38,15 @@ jobs:
 
     - name: Terraform Init
       working-directory: devsecops-k8s/terraform
-      run: terraform init
+      run: terraform init -lock=false
 
     - name: Terraform Validate
       working-directory: devsecops-k8s/terraform
-      run: terraform validate
+      run: terraform validate -lock=false
 
     - name: Terraform Plan
       working-directory: devsecops-k8s/terraform
-      run: terraform plan -out=tfplan
+      run: terraform plan -out=tfplan -lock=false
       if: github.event_name == 'pull_request'
 
     - name: Terraform Apply

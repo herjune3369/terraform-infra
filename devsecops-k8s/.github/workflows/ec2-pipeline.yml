@@ -19,6 +19,9 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: devsecops-k8s/terraform
     
     steps:
     - name: Checkout
@@ -36,30 +39,21 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: Cleanup old Terraform state
+    - name: Cleanup old terraform state
       run: rm -rf .terraform terraform.tfstate* tfplan
-      working-directory: devsecops-k8s/terraform
 
-    - name: Terraform Init
-      working-directory: devsecops-k8s/terraform
-      run: terraform init -lock=false
-
-    - name: Terraform Validate
-      working-directory: devsecops-k8s/terraform
-      run: terraform validate -lock=false
+    - name: Force init without backend
+      run: terraform init -reconfigure -backend=false
 
     - name: Terraform Plan
-      working-directory: devsecops-k8s/terraform
-      run: terraform plan -out=tfplan -lock=false
+      run: terraform plan -lock=false -out=tfplan
       if: github.event_name == 'pull_request'
 
     - name: Terraform Apply
-      working-directory: devsecops-k8s/terraform
-      run: terraform apply -auto-approve
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -lock=false -auto-approve tfplan
 
     - name: Generate Terraform outputs
-      working-directory: devsecops-k8s/terraform
       run: terraform output -json > terraform_outputs.json
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 

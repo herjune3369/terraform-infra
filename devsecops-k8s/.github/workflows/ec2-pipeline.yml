@@ -16,12 +16,12 @@ env:
   TF_VERSION: "1.5.0"
 
 jobs:
-  terraform:
-    name: Terraform
+  terraform-backend:
+    name: Terraform Backend Infrastructure
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: devsecops-k8s/terraform
+        working-directory: terraform
     
     steps:
     - name: Checkout
@@ -42,16 +42,65 @@ jobs:
     - name: Cleanup old terraform state
       run: rm -rf .terraform terraform.tfstate* tfplan
 
-    - name: Force init without backend
-      run: terraform init -reconfigure -backend=false
+    - name: Terraform Init (Local Backend)
+      run: terraform init -backend=false
+
+    - name: Terraform Plan Backend
+      run: terraform plan -target=aws_s3_bucket.terraform_state -target=aws_dynamodb_table.terraform_locks -out=tfplan-backend
+
+    - name: Terraform Apply Backend
+      run: terraform apply tfplan-backend
+
+    - name: Get Backend Config
+      id: backend-config
+      run: |
+        BACKEND_CONFIG=$(terraform output -json backend_config)
+        echo "backend_config=$BACKEND_CONFIG" >> $GITHUB_OUTPUT
+
+  terraform:
+    name: Terraform Main Infrastructure
+    runs-on: ubuntu-latest
+    needs: terraform-backend
+    defaults:
+      run:
+        working-directory: terraform
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Cleanup old terraform state
+      run: rm -rf .terraform terraform.tfstate* tfplan
+
+    - name: Terraform Init with S3 Backend
+      run: |
+        BACKEND_CONFIG='${{ needs.terraform-backend.outputs.backend-config }}'
+        terraform init \
+          -backend-config="bucket=$(echo $BACKEND_CONFIG | jq -r '.bucket')" \
+          -backend-config="key=$(echo $BACKEND_CONFIG | jq -r '.key')" \
+          -backend-config="region=$(echo $BACKEND_CONFIG | jq -r '.region')" \
+          -backend-config="dynamodb_table=$(echo $BACKEND_CONFIG | jq -r '.dynamodb_table')" \
+          -backend-config="encrypt=$(echo $BACKEND_CONFIG | jq -r '.encrypt')"
 
     - name: Terraform Plan
-      run: terraform plan -lock=false -out=tfplan
+      run: terraform plan -out=tfplan
       if: github.event_name == 'pull_request'
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -lock=false tfplan
+      run: terraform apply tfplan
 
     - name: Generate Terraform outputs
       run: terraform output -json > terraform_outputs.json
@@ -87,14 +136,14 @@ jobs:
         sudo apt-get install -y ansible
 
     - name: Install Ansible Galaxy roles
-      working-directory: devsecops-k8s/ansible
+      working-directory: ansible
       run: ansible-galaxy install -r requirements.yml
 
     - name: Copy Terraform outputs
-      run: cp devsecops-k8s/terraform/terraform_outputs.json devsecops-k8s/ansible/
+      run: cp terraform/terraform_outputs.json ansible/
 
     - name: Deploy Flask App
-      working-directory: devsecops-k8s/ansible
+      working-directory: ansible
       run: ansible-playbook playbook.yml
       env:
         ANSIBLE_HOST_KEY_CHECKING: False

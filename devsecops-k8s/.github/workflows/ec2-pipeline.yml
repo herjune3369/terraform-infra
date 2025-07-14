@@ -16,8 +16,8 @@ env:
   TF_VERSION: "1.5.0"
 
 jobs:
-  terraform-backend:
-    name: Terraform Backend Infrastructure
+  terraform:
+    name: Terraform Infrastructure
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,60 +40,34 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Cleanup old terraform state
-      run: rm -rf .terraform terraform.tfstate* tfplan
+      run: rm -rf .terraform terraform.tfstate* tfplan*
 
     - name: Terraform Init (Local Backend)
       run: terraform init -backend=false
 
-    - name: Terraform Plan Backend
-      run: terraform plan -target=aws_s3_bucket.terraform_state -target=aws_dynamodb_table.terraform_locks -out=tfplan-backend
-
-    - name: Terraform Apply Backend
-      run: terraform apply tfplan-backend
+    - name: Terraform Plan and Apply Backend
+      run: |
+        echo "Creating backend infrastructure..."
+        terraform plan -target=aws_s3_bucket.terraform_state -target=aws_dynamodb_table.terraform_locks -out=tfplan-backend
+        terraform apply tfplan-backend
+        echo "Backend infrastructure created successfully!"
 
     - name: Get Backend Config
       id: backend-config
       run: |
         BACKEND_CONFIG=$(terraform output -json backend_config)
         echo "backend_config=$BACKEND_CONFIG" >> $GITHUB_OUTPUT
-        echo "Backend config generated: $BACKEND_CONFIG"
+        echo "Backend config: $BACKEND_CONFIG"
 
-  terraform:
-    name: Terraform Main Infrastructure
-    runs-on: ubuntu-latest
-    needs: terraform-backend
-    defaults:
-      run:
-        working-directory: terraform
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: ${{ env.TF_VERSION }}
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Cleanup old terraform state
-      run: rm -rf .terraform terraform.tfstate* tfplan
-
-    - name: Wait for backend resources
+    - name: Wait for DynamoDB table
       run: |
-        echo "Waiting for backend resources to be ready..."
+        echo "Waiting for DynamoDB table to be active..."
         sleep 30
 
     - name: Terraform Init with S3 Backend
       run: |
-        BACKEND_CONFIG='${{ needs.terraform-backend.outputs.backend-config }}'
-        echo "Backend config: $BACKEND_CONFIG"
+        BACKEND_CONFIG='${{ steps.backend-config.outputs.backend-config }}'
+        echo "Initializing with backend config: $BACKEND_CONFIG"
         terraform init \
           -backend-config="bucket=$(echo $BACKEND_CONFIG | jq -r '.bucket')" \
           -backend-config="key=$(echo $BACKEND_CONFIG | jq -r '.key')" \

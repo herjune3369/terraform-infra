@@ -51,7 +51,7 @@ jobs:
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -lock=false -auto-approve tfplan
+      run: terraform apply -lock=false tfplan
 
     - name: Generate Terraform outputs
       run: terraform output -json > terraform_outputs.json

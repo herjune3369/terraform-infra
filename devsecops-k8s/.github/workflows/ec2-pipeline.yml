@@ -36,6 +36,10 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
+    - name: Cleanup old Terraform state
+      run: rm -rf .terraform terraform.tfstate* tfplan
+      working-directory: devsecops-k8s/terraform
+
     - name: Terraform Init
       working-directory: devsecops-k8s/terraform
       run: terraform init -lock=false

@@ -1,0 +1,10 @@
+---
+# Flask 애플리케이션 배포를 위한 roles
+- name: geerlingguy.python
+  version: 1.0.0
+
+- name: geerlingguy.mysql
+  version: 1.0.0
+
+- name: geerlingguy.nginx
+  version: 1.0.0 

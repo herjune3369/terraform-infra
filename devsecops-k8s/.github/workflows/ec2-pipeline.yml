@@ -38,7 +38,7 @@ jobs:
 
     - name: Terraform Init
       working-directory: devsecops-k8s/terraform
-      run: terraform init
+      run: terraform init -backend=false
 
     - name: Terraform Validate
       working-directory: devsecops-k8s/terraform

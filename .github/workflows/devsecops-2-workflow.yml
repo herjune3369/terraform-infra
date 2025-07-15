@@ -263,13 +263,13 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
       - name: Generate Terraform outputs
-        working-directory: terraform
+        working-directory: devsecops-2/terraform
         run: |
           terraform init
           terraform output -json > ../ansible/terraform_outputs.json
           echo "✅ Terraform outputs generated"
       - name: Setup SSH key
-        working-directory: ansible
+        working-directory: devsecops-2/ansible
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/saju_key
@@ -280,12 +280,12 @@ jobs:
           ls -la ~/.ssh/
           ssh-add -l
       - name: Check terraform_outputs.json exists
-        working-directory: ansible
+        working-directory: devsecops-2/ansible
         run: |
           ls -l terraform_outputs.json
           cat terraform_outputs.json
       - name: Deploy with Ansible
-        working-directory: ansible
+        working-directory: devsecops-2/ansible
         run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml
         env:
           ANSIBLE_HOST_KEY_CHECKING: False

@@ -42,7 +42,7 @@ def parse_sarif_file(file_path: str) -> Dict:
     except Exception as e:
         return {"error": f"SARIF 파일 파싱 실패: {str(e)}"}
 
-def generate_ai_report(trivy_fs_results: Dict, trivy_iac_results: Dict) -> str:
+def generate_ai_report(trivy_fs_results: Dict, trivy_iac_results: Dict, trivy_config_results: Dict = None, trivy_image_results: Dict = None, falco_results: Dict = None, gatekeeper_results: Dict = None) -> str:
     """AI 기반 보안 보고서를 생성합니다."""
     
     # 전체 통계 계산
@@ -285,15 +285,42 @@ def generate_ai_analysis(high_count: int, medium_count: int, low_count: int,
     return analysis
 
 def main():
-    """보안 보고서 생성을 위한 메인 함수입니다."""
-    print("🔍 Trivy 보안 스캔 결과를 분석하고 AI 보고서를 생성합니다...")
+    """3계층 보안 모델 기반 AI 보고서 생성을 위한 메인 함수입니다."""
+    print("🔍 3계층 보안 스캔 결과를 분석하고 AI 보고서를 생성합니다...")
     
-    # Trivy 스캔 결과 파싱
+    # Configuration Layer - Trivy 스캔 결과 파싱
     trivy_fs_results = parse_sarif_file("trivy-results.sarif")
     trivy_iac_results = parse_sarif_file("trivy-iac-results.sarif")
+    trivy_config_results = parse_sarif_file("trivy-config-results.sarif")
+    trivy_image_results = parse_sarif_file("trivy-image-results.sarif")
     
-    # AI 기반 보고서 생성
-    report_content = generate_ai_report(trivy_fs_results, trivy_iac_results)
+    # Runtime Layer - Falco 결과 (로그 파일에서 읽기)
+    falco_results = {"status": "deployed", "events": 0}
+    if os.path.exists("falco-events.log"):
+        try:
+            with open("falco-events.log", 'r') as f:
+                falco_results["events"] = len(f.readlines())
+        except:
+            pass
+    
+    # Policy Layer - Gatekeeper 결과 (정책 위반 확인)
+    gatekeeper_results = {"status": "deployed", "violations": 0}
+    if os.path.exists("gatekeeper-violations.log"):
+        try:
+            with open("gatekeeper-violations.log", 'r') as f:
+                gatekeeper_results["violations"] = len(f.readlines())
+        except:
+            pass
+    
+    # AI 기반 보고서 생성 (3계층 통합)
+    report_content = generate_ai_report(
+        trivy_fs_results, 
+        trivy_iac_results, 
+        trivy_config_results, 
+        trivy_image_results, 
+        falco_results, 
+        gatekeeper_results
+    )
     
     # 보고서 파일에 저장
     output_file = "trivy-security-report.md"
@@ -306,14 +333,20 @@ def main():
         total_vulns += trivy_fs_results.get("total_vulnerabilities", 0)
     if "error" not in trivy_iac_results:
         total_vulns += trivy_iac_results.get("total_vulnerabilities", 0)
+    if trivy_config_results and "error" not in trivy_config_results:
+        total_vulns += trivy_config_results.get("total_vulnerabilities", 0)
+    if trivy_image_results and "error" not in trivy_image_results:
+        total_vulns += trivy_image_results.get("total_vulnerabilities", 0)
     
-    print(f"✅ AI 보안 보고서 생성 완료: {output_file}")
-    print(f"📊 발견된 총 취약점: {total_vulns}개")
+    print(f"✅ 3계층 AI 보안 보고서 생성 완료: {output_file}")
+    print(f"📊 Configuration Layer 취약점: {total_vulns}개")
+    print(f"🔍 Runtime Layer 이벤트: {falco_results['events']}개")
+    print(f"🔒 Policy Layer 위반: {gatekeeper_results['violations']}개")
     
-    if total_vulns == 0:
-        print("🎉 보안 스캔 결과: 취약점이 발견되지 않았습니다!")
+    if total_vulns == 0 and falco_results['events'] == 0 and gatekeeper_results['violations'] == 0:
+        print("🎉 3계층 보안 스캔 결과: 모든 레이어에서 문제가 발견되지 않았습니다!")
     else:
-        print("⚠️  발견된 취약점을 검토하고 조치하시기 바랍니다.")
+        print("⚠️  발견된 보안 문제를 검토하고 조치하시기 바랍니다.")
 
 if __name__ == "__main__":
     main() 

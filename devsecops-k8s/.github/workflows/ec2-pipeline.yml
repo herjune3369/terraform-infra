@@ -39,6 +39,14 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
+    # ─── 디버그 1: 실제 사용하는 AWS 계정 확인 ───
+    - name: AWS Caller Identity
+      run: aws sts get-caller-identity
+
+    # ─── 디버그 2: DynamoDB 테이블 조회 테스트 ───
+    - name: Describe DynamoDB Lock Table
+      run: aws dynamodb describe-table --table-name terraform-lock-table --region ${{ env.AWS_REGION }}
+
     - name: Cleanup old terraform state
       run: rm -rf .terraform terraform.tfstate* tfplan*
 

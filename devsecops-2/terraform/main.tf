@@ -67,15 +67,7 @@ resource "aws_route_table" "public_rt" {
   }
 }
 
-resource "aws_route_table_association" "public_rt_assoc_a" {
-  subnet_id      = data.aws_subnet.public_subnet_a.id
-  route_table_id = aws_route_table.public_rt.id
-}
-
-resource "aws_route_table_association" "public_rt_assoc_b" {
-  subnet_id      = data.aws_subnet.public_subnet_b.id
-  route_table_id = aws_route_table.public_rt.id
-}
+# 라우트 테이블 연결은 이미 존재하므로 제거
 
 resource "aws_route_table" "private_rt" {
   vpc_id = data.aws_vpc.existing_vpc.id
@@ -90,17 +82,14 @@ resource "aws_route_table" "private_rt" {
   }
 }
 
-resource "aws_route_table_association" "private_rt_assoc_c" {
-  subnet_id      = data.aws_subnet.private_subnet_c.id
-  route_table_id = aws_route_table.private_rt.id
-}
+# private 라우트 테이블 연결도 이미 존재하므로 제거
 
 # private-subnet-b가 없으므로 제거
 
-# RDS 설정 - private-subnet-b가 없으므로 private-subnet-c만 사용
+# RDS 설정 - public 서브넷을 사용하여 AZ 요구사항 충족
 resource "aws_db_subnet_group" "rds_subnet_group" {
   name       = "rds-subnet-group"
-  subnet_ids = [data.aws_subnet.private_subnet_c.id]
+  subnet_ids = [data.aws_subnet.public_subnet_a.id, data.aws_subnet.public_subnet_b.id]
 
   tags = {
     Name = "rds-subnet-group"

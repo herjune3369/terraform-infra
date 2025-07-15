@@ -1,0 +1,49 @@
+name: DevSecOps K8s Infrastructure Validation
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'devsecops-k8s/**'
+  pull_request:
+    paths:
+      - 'devsecops-k8s/**'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: devsecops-k8s/terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ap-northeast-2
+
+      # ─── 이 두 스텝을 반드시 여기에 추가하세요 ───
+      - name: AWS Caller Identity
+        run: aws sts get-caller-identity
+
+      - name: Describe DynamoDB Lock Table
+        run: aws dynamodb describe-table \
+               --table-name terraform-lock-table \
+               --region ap-northeast-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: v1.5.7
+
+      - name: Terraform Fmt Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -lock=false -out=tfplan 

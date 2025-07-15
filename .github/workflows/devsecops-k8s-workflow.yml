@@ -117,12 +117,19 @@ jobs:
           echo "✅ Container image scan completed"
           ls -la trivy-image-results.sarif || echo "⚠️ No container image issues found"
       
-      # 3-1. 사주앱 컨테이너 이미지 스캔
+      # 3-1. 사주앱 컨테이너 이미지 스캔 (로컬 빌드 후 스캔)
+      - name: Build Saju App Image for Scanning
+        run: |
+          echo "🐳 Building saju-app image for scanning..."
+          cd devsecops-k8s
+          docker build -t saju-app:latest .
+          echo "✅ Saju app image built for scanning"
+      
       - name: Run Trivy Saju App Image Scan
         run: |
           echo "🔍 Running Trivy saju-app image scan..."
-          # ECR 레지스트리에서 이미지 스캔
-          trivy image 483260554116.dkr.ecr.ap-northeast-2.amazonaws.com/saju-app:latest \
+          # 로컬에서 빌드된 이미지 스캔
+          trivy image saju-app:latest \
             --format sarif --output trivy-saju-image.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
           echo "✅ Saju app image scan completed"
           ls -la trivy-saju-image.sarif || echo "⚠️ No saju-app image issues found"
@@ -378,6 +385,19 @@ jobs:
           cd devsecops-k8s
           chmod +x run-trivy-scans.sh
           ./run-trivy-scans.sh
+      
+      # 6-1. ECR에 푸시된 사주앱 이미지 스캔
+      - name: Run Trivy ECR Image Scan
+        run: |
+          echo "🔍 Running Trivy scan on ECR saju-app image..."
+          # ECR 로그인 (이미 위에서 했지만 다시 확인)
+          aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 483260554116.dkr.ecr.ap-northeast-2.amazonaws.com
+          
+          # ECR에서 이미지 스캔
+          trivy image 483260554116.dkr.ecr.ap-northeast-2.amazonaws.com/saju-app:latest \
+            --format sarif --output trivy-ecr-saju-image.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
+          echo "✅ ECR saju-app image scan completed"
+          ls -la trivy-ecr-saju-image.sarif || echo "⚠️ No ECR image issues found"
       
       # 7. Falco & Gatekeeper 배포 (Runtime & Policy Layer)
       - name: Deploy Runtime Layer (Falco)

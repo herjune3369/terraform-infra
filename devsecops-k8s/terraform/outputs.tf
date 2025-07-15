@@ -18,3 +18,24 @@ output "rds_endpoint" {
 output "rds_database" {
   value = aws_db_instance.flask_db.db_name
 }
+
+# EKS 클러스터 출력
+output "eks_cluster_name" {
+  value = aws_eks_cluster.main.name
+}
+
+output "eks_cluster_endpoint" {
+  value = aws_eks_cluster.main.endpoint
+}
+
+output "eks_cluster_arn" {
+  value = aws_eks_cluster.main.arn
+}
+
+output "eks_cluster_version" {
+  value = aws_eks_cluster.main.version
+}
+
+output "eks_node_group_name" {
+  value = aws_eks_node_group.main.node_group_name
+}

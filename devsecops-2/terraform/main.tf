@@ -32,13 +32,7 @@ data "aws_subnet" "private_subnet_c" {
   }
 }
 
-data "aws_subnet" "private_subnet_b" {
-  vpc_id = data.aws_vpc.existing_vpc.id
-  filter {
-    name   = "tag:Name"
-    values = ["private-subnet-b"]
-  }
-}
+# private-subnet-b는 존재하지 않으므로 제거
 
 # NAT Gateway를 위한 EIP
 resource "aws_eip" "nat_eip" {
@@ -101,15 +95,12 @@ resource "aws_route_table_association" "private_rt_assoc_c" {
   route_table_id = aws_route_table.private_rt.id
 }
 
-resource "aws_route_table_association" "private_rt_assoc_b" {
-  subnet_id      = data.aws_subnet.private_subnet_b.id
-  route_table_id = aws_route_table.private_rt.id
-}
+# private-subnet-b가 없으므로 제거
 
-# RDS 설정
+# RDS 설정 - private-subnet-b가 없으므로 private-subnet-c만 사용
 resource "aws_db_subnet_group" "rds_subnet_group" {
   name       = "rds-subnet-group"
-  subnet_ids = [data.aws_subnet.private_subnet_c.id, data.aws_subnet.private_subnet_b.id]
+  subnet_ids = [data.aws_subnet.private_subnet_c.id]
 
   tags = {
     Name = "rds-subnet-group"
@@ -127,10 +118,7 @@ data "aws_security_group" "alb_sg" {
   vpc_id = data.aws_vpc.existing_vpc.id
 }
 
-data "aws_security_group" "rds_sg" {
-  name   = "rds-sg"
-  vpc_id = data.aws_vpc.existing_vpc.id
-}
+# rds-sg는 존재하지 않으므로 제거
 
 # RDS 설정
 resource "aws_db_instance" "flask_db" {
@@ -147,7 +135,7 @@ resource "aws_db_instance" "flask_db" {
   multi_az                = false
   backup_retention_period = 0
 
-  vpc_security_group_ids = [data.aws_security_group.rds_sg.id]
+  vpc_security_group_ids = [data.aws_security_group.web_sg.id]
   db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
 
   tags = {

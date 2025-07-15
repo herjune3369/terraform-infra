@@ -7,12 +7,8 @@ permissions:
 on:
   push:
     branches: [ devsecops-2 ]
-    paths:
-      - 'devsecops-2/**'
   pull_request:
     branches: [ devsecops-2 ]
-    paths:
-      - 'devsecops-2/**'
 
 env:
   AWS_REGION: ap-northeast-2
@@ -100,7 +96,7 @@ jobs:
     name: AI Security Report
     runs-on: ubuntu-latest
     needs: [trivy-fs-scan, trivy-iac-scan]
-    if: needs.trivy-fs-scan.result == 'success' && needs.trivy-iac-scan.result == 'success'
+    if: always()
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -110,11 +106,13 @@ jobs:
           python-version: '3.9'
       - name: Download Trivy FS results
         uses: actions/download-artifact@v4
+        if: needs.trivy-fs-scan.result == 'success'
         with:
           name: trivy-fs-results
           path: .
       - name: Download Trivy IaC results
         uses: actions/download-artifact@v4
+        if: needs.trivy-iac-scan.result == 'success'
         with:
           name: trivy-iac-results
           path: .
@@ -130,14 +128,23 @@ jobs:
           find . -name "generate_security_report.py" -type f
       - name: Copy Trivy results to devsecops-2 directory
         run: |
-          cp trivy-results.sarif devsecops-2/
-          cp trivy-iac-results.sarif devsecops-2/
+          if [ -f trivy-results.sarif ]; then
+            cp trivy-results.sarif devsecops-2/
+          fi
+          if [ -f trivy-iac-results.sarif ]; then
+            cp trivy-iac-results.sarif devsecops-2/
+          fi
       - name: Generate AI Security Report
         run: |
           cd devsecops-2
-          python3 generate_security_report.py
+          if [ -f generate_security_report.py ]; then
+            python3 generate_security_report.py
+          else
+            echo "generate_security_report.py not found, skipping AI report generation"
+          fi
       - name: Upload AI Security Report
         uses: actions/upload-artifact@v4
+        if: hashFiles('devsecops-2/trivy-security-report.md') != ''
         with:
           name: trivy-ai-security-report
           path: devsecops-2/trivy-security-report.md

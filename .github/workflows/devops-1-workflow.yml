@@ -1,230 +1,49 @@
-name: DevOps Infrastructure Automation
-
+name: DevOps-1 Infrastructure Validation
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ devops-1 ]
     paths:
       - 'devops-1/**'
   pull_request:
-    branches: [ main ]
+    branches: [ devops-1 ]
     paths:
       - 'devops-1/**'
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-        - dev
-        - staging
-        - prod
-
-env:
-  AWS_REGION: ap-northeast-2
-  TF_VERSION: "1.5.0"
 
 jobs:
-  validate:
-    name: Validate Infrastructure Code
+  terraform:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./devops-1
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: ${{ env.TF_VERSION }}
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-    
-    - name: Debug 파일 구조
-      run: |
-        echo "🏷️ 현재 작업 디렉터리: $(pwd)"
-        echo "📂 리포지토리 구조 전체:"
-        ls -la
-        echo ""
-        echo "📁 devops-1 폴더 확인:"
-        if [ -d "devops-1" ]; then
-          ls -la devops-1/
-          echo ""
-          echo "📁 devops-1/terraform 폴더 확인:"
-          if [ -d "devops-1/terraform" ]; then
-            ls -la devops-1/terraform/
-          else
-            echo "❌ devops-1/terraform 폴더가 없습니다!"
-          fi
-        else
-          echo "❌ devops-1 폴더가 없습니다!"
-        fi
-        echo ""
-        echo "🔍 .tf 파일 검색:"
-        find . -name "*.tf" -type f 2>/dev/null || echo "No .tf files found"
-    
-    - name: Terraform Format Check
-      working-directory: ./devops-1/terraform
-      run: terraform fmt -check -recursive
-    
-    - name: Terraform Init
-      working-directory: ./devops-1/terraform
-      run: |
-        terraform init
-        terraform validate
-    
-    - name: Terraform Plan
-      working-directory: ./devops-1/terraform
-      run: terraform plan -out=tfplan
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
+        working-directory: devops-1/terraform
 
-  # Security scan removed - DevSecOps project handles security scanning
-
-  deploy-infrastructure:
-    name: Deploy Infrastructure
-    runs-on: ubuntu-latest
-    needs: [validate]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    defaults:
-      run:
-        working-directory: ./devops-1
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-    
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: ${{ env.TF_VERSION }}
-    
-    - name: Terraform Init
-      working-directory: ./devops-1/terraform
-      run: terraform init
-    
-    - name: Terraform Apply
-      working-directory: ./devops-1/terraform
-      run: terraform apply -auto-approve
-      env:
-        TF_VAR_environment: ${{ github.event.inputs.environment || 'dev' }}
-    
-    - name: Save Terraform outputs
-      working-directory: ./devops-1/terraform
-      run: |
-        if [ -f "save_outputs.sh" ]; then
-          chmod +x save_outputs.sh
-          ./save_outputs.sh
-        fi
+      - uses: actions/checkout@v4
 
-  deploy-application:
-    name: Deploy Application
-    runs-on: ubuntu-latest
-    needs: [deploy-infrastructure]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    defaults:
-      run:
-        working-directory: ./devops-1
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-    
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: Install Ansible and AWS plugins
-      run: |
-        python -m pip install --upgrade pip
-        pip install ansible boto3
-        ansible-galaxy collection install amazon.aws
-    
-    - name: Setup Terraform for outputs
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: ${{ env.TF_VERSION }}
-    
-    - name: Generate Terraform outputs
-      working-directory: ./devops-1/terraform
-      run: |
-        terraform init
-        terraform output -json > ../ansible/terraform_outputs.json
-        echo "✅ Terraform outputs generated"
-    
-    - name: Setup SSH key
-      working-directory: ./devops-1/ansible
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/saju_key
-        chmod 600 ~/.ssh/saju_key
-        eval "$(ssh-agent -s)"
-        ssh-add ~/.ssh/saju_key
-        echo "SSH key setup completed"
-        ls -la ~/.ssh/
-        ssh-add -l
-    
-    - name: Debug AWS EC2 inventory
-      working-directory: ./devops-1/ansible
-      run: |
-        echo "🔍 Testing AWS EC2 inventory..."
-        ansible-inventory -i inventories/aws_ec2.yml --list
-        echo "✅ AWS EC2 inventory test completed"
-        
-        echo "🔍 Testing SSH connection to webserver1..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ubuntu@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver1" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
-        
-        echo "🔍 Testing SSH connection to webserver2..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ubuntu@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver2" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
-    
-    - name: Deploy with Ansible
-      working-directory: ./devops-1/ansible
-      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}" --private-key ~/.ssh/saju_key
-      env:
-        ANSIBLE_HOST_KEY_CHECKING: False
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ap-northeast-2
 
-  notify:
-    name: Notify Deployment Status
-    runs-on: ubuntu-latest
-    needs: [deploy-application]
-    if: always()
-    
-    steps:
-    - name: Notify on Success
-      if: needs.deploy-application.result == 'success'
-      run: |
-        echo "✅ DevOps deployment completed successfully!"
-        echo "Environment: ${{ github.event.inputs.environment || 'dev' }}"
-    
-    - name: Notify on Failure
-      if: needs.deploy-application.result == 'failure'
-      run: |
-        echo "❌ DevOps deployment failed!"
-        echo "Environment: ${{ github.event.inputs.environment || 'dev' }}"
-        exit 1 
+      - name: AWS Caller Identity
+        run: aws sts get-caller-identity
+
+      - name: Describe DynamoDB Lock Table
+        run: aws dynamodb describe-table \
+               --table-name terraform-lock-table \
+               --region ap-northeast-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: v1.5.7
+
+      - name: Terraform Fmt Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -lock=false -out=tfplan 

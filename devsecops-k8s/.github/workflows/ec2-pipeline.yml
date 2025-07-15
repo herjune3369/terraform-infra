@@ -45,18 +45,10 @@ jobs:
 
     # ─── 디버그 2: DynamoDB 테이블 조회 테스트 ───
     - name: Describe DynamoDB Lock Table
-      run: aws dynamodb describe-table --table-name terraform-lock-table --region ${{ env.AWS_REGION }}
+      run: aws dynamodb describe-table --table-name terraform-lock-table --region ap-northeast-2
 
     - name: Cleanup old terraform state
       run: rm -rf .terraform terraform.tfstate* tfplan*
-
-    - name: Wait for DynamoDB table
-      run: |
-        echo "Waiting for DynamoDB table to be active..."
-        sleep 30
-        echo "Checking DynamoDB table status..."
-        aws dynamodb describe-table --table-name "terraform-lock-table" --region ap-northeast-2
-        echo "DynamoDB table is ready!"
 
     - name: Terraform Init
       run: |

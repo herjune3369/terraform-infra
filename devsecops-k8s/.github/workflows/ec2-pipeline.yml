@@ -62,26 +62,36 @@ jobs:
     - name: Wait for DynamoDB table
       run: |
         echo "Waiting for DynamoDB table to be active..."
-        sleep 30
+        sleep 60
+        echo "Checking DynamoDB table status..."
+        aws dynamodb describe-table --table-name $(terraform output -raw backend_config | jq -r '.dynamodb_table') --region ap-northeast-2
 
     - name: Terraform Init with S3 Backend
       run: |
         BACKEND_CONFIG='${{ steps.backend-config.outputs.backend-config }}'
         echo "Initializing with backend config: $BACKEND_CONFIG"
+        echo "Bucket: $(echo $BACKEND_CONFIG | jq -r '.bucket')"
+        echo "DynamoDB Table: $(echo $BACKEND_CONFIG | jq -r '.dynamodb_table')"
+        echo "Region: $(echo $BACKEND_CONFIG | jq -r '.region')"
         terraform init \
           -backend-config="bucket=$(echo $BACKEND_CONFIG | jq -r '.bucket')" \
           -backend-config="key=$(echo $BACKEND_CONFIG | jq -r '.key')" \
           -backend-config="region=$(echo $BACKEND_CONFIG | jq -r '.region')" \
           -backend-config="dynamodb_table=$(echo $BACKEND_CONFIG | jq -r '.dynamodb_table')" \
           -backend-config="encrypt=$(echo $BACKEND_CONFIG | jq -r '.encrypt')"
+        echo "Backend initialization completed!"
 
-    - name: Terraform Plan
-      run: terraform plan -out=tfplan
+    - name: Terraform Plan (Full Infrastructure)
+      run: |
+        echo "Planning full infrastructure..."
+        terraform plan -out=tfplan
       if: github.event_name == 'pull_request'
 
-    - name: Terraform Apply
+    - name: Terraform Apply (Full Infrastructure)
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply tfplan
+      run: |
+        echo "Applying full infrastructure..."
+        terraform apply tfplan
 
     - name: Generate Terraform outputs
       run: terraform output -json > terraform_outputs.json

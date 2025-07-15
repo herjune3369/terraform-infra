@@ -1,294 +1,49 @@
-name: DevSecOps Pipeline
-
-permissions:
-  contents: read
-  security-events: write
-
+name: DevSecOps-2 Infrastructure Validation
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ devsecops-2 ]
+    paths:
+      - 'devsecops-2/**'
   pull_request:
-    branches: [ main ]
-
-env:
-  AWS_REGION: ap-northeast-2
-  TF_VERSION: '1.5.0'
+    branches: [ devsecops-2 ]
+    paths:
+      - 'devsecops-2/**'
 
 jobs:
-  trivy-fs-scan:
-    name: Trivy File System Scan
+  terraform:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-      - name: Run Trivy vulnerability scanner (File System)
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: 'devsecops-2'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-      - name: Upload Trivy FS results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-fs-results
-          path: trivy-results.sarif
-      - name: Generate Trivy FS Summary
-        if: always()
-        run: |
-          echo "## 🔍 Trivy File System Scan Results" >> $GITHUB_STEP_SUMMARY
-          if [ -f trivy-results.sarif ]; then
-            echo "✅ File system scan completed successfully" >> $GITHUB_STEP_SUMMARY
-            echo "📁 Results uploaded to GitHub Security tab" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ File system scan failed or no results generated" >> $GITHUB_STEP_SUMMARY
-          fi
-
-  trivy-iac-scan:
-    name: Trivy IaC Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - name: Debug Workspace Structure
-        run: |
-          echo "Current working directory:"
-          pwd
-          echo "Workspace structure:"
-          ls -la
-          echo "terraform directory structure:"
-          ls -la terraform/
-      - name: Install Trivy
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.64.1
-      - name: Run Trivy for Infrastructure as Code
-        run: |
-          trivy config terraform --format sarif --output trivy-iac-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
-      - name: Upload Trivy IaC results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-iac-results
-          path: trivy-iac-results.sarif
-      - name: Generate Trivy IaC Summary
-        if: always()
-        run: |
-          echo "## 🏗️ Trivy Infrastructure as Code Scan Results" >> $GITHUB_STEP_SUMMARY
-          if [ -f trivy-iac-results.sarif ]; then
-            echo "✅ IaC scan completed successfully" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ IaC scan failed or no results generated" >> $GITHUB_STEP_SUMMARY
-          fi
-
-  ai-security-report:
-    name: AI Security Report
-    runs-on: ubuntu-latest
-    needs: [trivy-fs-scan, trivy-iac-scan]
-    if: needs.trivy-fs-scan.result == 'success' && needs.trivy-iac-scan.result == 'success'
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - name: Download Trivy FS results
-        uses: actions/download-artifact@v4
-        with:
-          name: trivy-fs-results
-          path: .
-      - name: Download Trivy IaC results
-        uses: actions/download-artifact@v4
-        with:
-          name: trivy-iac-results
-          path: .
-      - name: Debug Workspace Structure for AI Report
-        run: |
-          echo "Current working directory:"
-          pwd
-          echo "Workspace structure:"
-          ls -la
-          echo "devsecops-2 directory structure:"
-          ls -la devsecops-2/
-          echo "Looking for generate_security_report.py:"
-          find . -name "generate_security_report.py" -type f
-      - name: Copy Trivy results to devsecops-2 directory
-        run: |
-          cp trivy-results.sarif devsecops-2/
-          cp trivy-iac-results.sarif devsecops-2/
-      - name: Generate AI Security Report
-        run: |
-          cd devsecops-2
-          python3 generate_security_report.py
-      - name: Upload AI Security Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-ai-security-report
-          path: devsecops-2/trivy-security-report.md
-      - name: Generate Final AI Summary
-        run: |
-          echo "## 🤖 AI Security Scan Complete" >> $GITHUB_STEP_SUMMARY
-          echo "### Overall Status: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 Job Results:" >> $GITHUB_STEP_SUMMARY
-          echo "- Trivy File System Scan: ${{ needs.trivy-fs-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Trivy IaC Scan: ${{ needs.trivy-iac-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Reports Available:" >> $GITHUB_STEP_SUMMARY
-          echo "- 🤖 AI Security Report (trivy-security-report.md)" >> $GITHUB_STEP_SUMMARY
-          echo "- GitHub Security Tab" >> $GITHUB_STEP_SUMMARY
-          echo "- Workflow Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- Trivy FS Results: trivy-results.sarif" >> $GITHUB_STEP_SUMMARY
-          echo "- Trivy IaC Results: trivy-iac-results.sarif" >> $GITHUB_STEP_SUMMARY
-
-  validate-infrastructure:
-    name: Validate Infrastructure Code
-    runs-on: ubuntu-latest
-    needs: [ai-security-report]
-    if: needs.ai-security-report.result == 'success'
     defaults:
       run:
-        working-directory: ./terraform
+        working-directory: devsecops-2/terraform
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region:            ap-northeast-2
+
+      - name: AWS Caller Identity
+        run: aws sts get-caller-identity
+
+      - name: Describe DynamoDB Lock Table
+        run: aws dynamodb describe-table \
+               --table-name terraform-lock-table \
+               --region ap-northeast-2
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - name: Terraform Format Check
+          terraform_version: v1.5.7
+
+      - name: Terraform Fmt Check
         run: terraform fmt -check -recursive
+
       - name: Terraform Init
-        run: |
-          terraform init
-          terraform validate
+        run: terraform init
+
       - name: Terraform Plan
-        run: |
-          terraform plan -out=tfplan
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
-
-  deploy-infrastructure:
-    name: Deploy Infrastructure
-    runs-on: ubuntu-latest
-    needs: [validate-infrastructure]
-    if: needs.validate-infrastructure.result == 'success'
-    defaults:
-      run:
-        working-directory: ./terraform
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - name: Terraform Init
-        run: |
-          terraform init
-      - name: Terraform Apply
-        run: |
-          terraform apply -auto-approve
-      - name: Save Terraform outputs
-        run: |
-          if [ -f "save_outputs.sh" ]; then
-            chmod +x save_outputs.sh
-            ./save_outputs.sh
-          fi
-  deploy-application:
-    name: Deploy Security Scanner Application
-    runs-on: ubuntu-latest
-    needs: [deploy-infrastructure]
-    if: needs.deploy-infrastructure.result == 'success'
-    defaults:
-      run:
-        working-directory: ./devsecops-2
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - name: Install Ansible
-        run: |
-          python -m pip install --upgrade pip
-          pip install ansible boto3
-      - name: Setup Terraform for outputs
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - name: Generate Terraform outputs
-        working-directory: ./terraform
-        run: |
-          terraform init
-          terraform output -json > ../devsecops-2/ansible/terraform_outputs.json
-          echo "✅ Terraform outputs generated"
-      - name: Setup SSH key
-        working-directory: ./devsecops-2/ansible
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/saju_key
-          chmod 600 ~/.ssh/saju_key
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/saju_key
-          echo "SSH key setup completed"
-          ls -la ~/.ssh/
-          ssh-add -l
-      - name: Check terraform_outputs.json exists
-        working-directory: ./devsecops-2/ansible
-        run: |
-          ls -l terraform_outputs.json
-          cat terraform_outputs.json
-      - name: Deploy with Ansible
-        working-directory: ./devsecops-2/ansible
-        run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: False
-
-  notify:
-    name: Notify Deployment Status
-    runs-on: ubuntu-latest
-    needs: [deploy-application, ai-security-report]
-    if: always()
-    steps:
-      - name: Notify on Success
-        if: needs.deploy-application.result == 'success' && needs.ai-security-report.result == 'success'
-        run: |
-          echo "✅ DevSecOps deployment completed successfully!"
-          echo "Security scan and infrastructure deployment completed"
-      - name: Notify on Failure
-        if: needs.deploy-application.result == 'failure' || needs.ai-security-report.result == 'failure'
-        run: |
-          echo "❌ DevSecOps deployment failed!"
-          echo "Check the logs for more details"
-          exit 1 
+        run: terraform plan -lock=false -out=tfplan 

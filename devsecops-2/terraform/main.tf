@@ -118,17 +118,17 @@ resource "aws_db_subnet_group" "rds_subnet_group" {
 
 # 기존 Security Groups 사용
 data "aws_security_group" "web_sg" {
-  name = "web-sg"
+  name   = "web-sg"
   vpc_id = data.aws_vpc.existing_vpc.id
 }
 
 data "aws_security_group" "alb_sg" {
-  name = "alb-sg"
+  name   = "alb-sg"
   vpc_id = data.aws_vpc.existing_vpc.id
 }
 
 data "aws_security_group" "rds_sg" {
-  name = "rds-sg"
+  name   = "rds-sg"
   vpc_id = data.aws_vpc.existing_vpc.id
 }
 

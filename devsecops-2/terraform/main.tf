@@ -7,46 +7,36 @@ data "aws_vpc" "existing_vpc" {
   id = var.vpc_id
 }
 
-# 서브넷 생성
-resource "aws_subnet" "public_subnet_a" {
-  vpc_id                  = data.aws_vpc.existing_vpc.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "ap-northeast-2a"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "public-subnet-a"
+# 기존 서브넷 사용
+data "aws_subnet" "public_subnet_a" {
+  vpc_id = data.aws_vpc.existing_vpc.id
+  filter {
+    name   = "tag:Name"
+    values = ["public-subnet-a"]
   }
 }
 
-resource "aws_subnet" "public_subnet_b" {
-  vpc_id                  = data.aws_vpc.existing_vpc.id
-  cidr_block              = "10.0.2.0/24"
-  availability_zone       = "ap-northeast-2b"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "public-subnet-b"
+data "aws_subnet" "public_subnet_b" {
+  vpc_id = data.aws_vpc.existing_vpc.id
+  filter {
+    name   = "tag:Name"
+    values = ["public-subnet-b"]
   }
 }
 
-resource "aws_subnet" "private_subnet_c" {
-  vpc_id            = data.aws_vpc.existing_vpc.id
-  cidr_block        = "10.0.3.0/24"
-  availability_zone = "ap-northeast-2c"
-
-  tags = {
-    Name = "private-subnet-c"
+data "aws_subnet" "private_subnet_c" {
+  vpc_id = data.aws_vpc.existing_vpc.id
+  filter {
+    name   = "tag:Name"
+    values = ["private-subnet-c"]
   }
 }
 
-resource "aws_subnet" "private_subnet_b" {
-  vpc_id            = data.aws_vpc.existing_vpc.id
-  cidr_block        = "10.0.4.0/24"
-  availability_zone = "ap-northeast-2b"
-
-  tags = {
-    Name = "private-subnet-b"
+data "aws_subnet" "private_subnet_b" {
+  vpc_id = data.aws_vpc.existing_vpc.id
+  filter {
+    name   = "tag:Name"
+    values = ["private-subnet-b"]
   }
 }
 
@@ -58,16 +48,19 @@ resource "aws_eip" "nat_eip" {
 # NAT Gateway
 resource "aws_nat_gateway" "nat_gw" {
   allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.public_subnet_a.id
+  subnet_id     = data.aws_subnet.public_subnet_a.id
 
   tags = {
     Name = "nat-gateway"
   }
 }
 
-# Internet Gateway
-resource "aws_internet_gateway" "igw" {
-  vpc_id = data.aws_vpc.existing_vpc.id
+# 기존 Internet Gateway 사용
+data "aws_internet_gateway" "existing_igw" {
+  filter {
+    name   = "attachment.vpc-id"
+    values = [data.aws_vpc.existing_vpc.id]
+  }
 }
 
 # Route Tables
@@ -76,17 +69,17 @@ resource "aws_route_table" "public_rt" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
+    gateway_id = data.aws_internet_gateway.existing_igw.id
   }
 }
 
 resource "aws_route_table_association" "public_rt_assoc_a" {
-  subnet_id      = aws_subnet.public_subnet_a.id
+  subnet_id      = data.aws_subnet.public_subnet_a.id
   route_table_id = aws_route_table.public_rt.id
 }
 
 resource "aws_route_table_association" "public_rt_assoc_b" {
-  subnet_id      = aws_subnet.public_subnet_b.id
+  subnet_id      = data.aws_subnet.public_subnet_b.id
   route_table_id = aws_route_table.public_rt.id
 }
 
@@ -104,106 +97,39 @@ resource "aws_route_table" "private_rt" {
 }
 
 resource "aws_route_table_association" "private_rt_assoc_c" {
-  subnet_id      = aws_subnet.private_subnet_c.id
+  subnet_id      = data.aws_subnet.private_subnet_c.id
   route_table_id = aws_route_table.private_rt.id
 }
 
 resource "aws_route_table_association" "private_rt_assoc_b" {
-  subnet_id      = aws_subnet.private_subnet_b.id
+  subnet_id      = data.aws_subnet.private_subnet_b.id
   route_table_id = aws_route_table.private_rt.id
 }
 
 # RDS 설정
 resource "aws_db_subnet_group" "rds_subnet_group" {
   name       = "rds-subnet-group"
-  subnet_ids = [aws_subnet.private_subnet_c.id, aws_subnet.private_subnet_b.id]
+  subnet_ids = [data.aws_subnet.private_subnet_c.id, data.aws_subnet.private_subnet_b.id]
 
   tags = {
     Name = "rds-subnet-group"
   }
 }
 
-# Security Groups
-resource "aws_security_group" "web_sg" {
-  name        = "web-sg"
-  description = "Allow SSH, HTTP, and Flask app port"
-  vpc_id      = data.aws_vpc.existing_vpc.id
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 5000
-    to_port     = 5000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+# 기존 Security Groups 사용
+data "aws_security_group" "web_sg" {
+  name = "web-sg"
+  vpc_id = data.aws_vpc.existing_vpc.id
 }
 
-resource "aws_security_group" "alb_sg" {
-  name        = "alb-sg"
-  description = "Allow HTTP to ALB"
-  vpc_id      = data.aws_vpc.existing_vpc.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "alb-sg"
-  }
+data "aws_security_group" "alb_sg" {
+  name = "alb-sg"
+  vpc_id = data.aws_vpc.existing_vpc.id
 }
 
-resource "aws_security_group" "rds_sg" {
-  name        = "rds-sg"
-  description = "Allow MySQL from EC2"
-  vpc_id      = data.aws_vpc.existing_vpc.id
-
-  ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "rds-sg"
-  }
+data "aws_security_group" "rds_sg" {
+  name = "rds-sg"
+  vpc_id = data.aws_vpc.existing_vpc.id
 }
 
 # RDS 설정
@@ -221,7 +147,7 @@ resource "aws_db_instance" "flask_db" {
   multi_az                = false
   backup_retention_period = 0
 
-  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  vpc_security_group_ids = [data.aws_security_group.rds_sg.id]
   db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
 
   tags = {
@@ -240,8 +166,8 @@ resource "aws_key_pair" "app_key" {
 resource "aws_instance" "web1" {
   ami                         = var.ami_id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public_subnet_a.id
-  vpc_security_group_ids      = [aws_security_group.web_sg.id]
+  subnet_id                   = data.aws_subnet.public_subnet_a.id
+  vpc_security_group_ids      = [data.aws_security_group.web_sg.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.app_key.key_name
 
@@ -253,8 +179,8 @@ resource "aws_instance" "web1" {
 resource "aws_instance" "web2" {
   ami                         = var.ami_id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public_subnet_b.id
-  vpc_security_group_ids      = [aws_security_group.web_sg.id]
+  subnet_id                   = data.aws_subnet.public_subnet_b.id
+  vpc_security_group_ids      = [data.aws_security_group.web_sg.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.app_key.key_name
 
@@ -263,37 +189,21 @@ resource "aws_instance" "web2" {
   }
 }
 
+# 기존 Target Group 사용
+data "aws_lb_target_group" "existing_app_tg" {
+  name = "app-tg"
+}
+
 # Load Balancer 설정
 resource "aws_lb" "app_lb" {
   name               = "app-lb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = [aws_subnet.public_subnet_a.id, aws_subnet.public_subnet_b.id]
+  security_groups    = [data.aws_security_group.alb_sg.id]
+  subnets            = [data.aws_subnet.public_subnet_a.id, data.aws_subnet.public_subnet_b.id]
 
   tags = {
     Name = "app-lb"
-  }
-}
-
-resource "aws_lb_target_group" "app_tg" {
-  name     = "app-tg"
-  port     = 5000
-  protocol = "HTTP"
-  vpc_id   = data.aws_vpc.existing_vpc.id
-
-  health_check {
-    path                = "/"
-    protocol            = "HTTP"
-    port                = "5000"
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-    interval            = 30
-  }
-
-  tags = {
-    Name = "app-target-group"
   }
 }
 
@@ -304,18 +214,18 @@ resource "aws_lb_listener" "app_listener" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app_tg.arn
+    target_group_arn = data.aws_lb_target_group.existing_app_tg.arn
   }
 }
 
 resource "aws_lb_target_group_attachment" "web1_attach" {
-  target_group_arn = aws_lb_target_group.app_tg.arn
+  target_group_arn = data.aws_lb_target_group.existing_app_tg.arn
   target_id        = aws_instance.web1.id
   port             = 5000
 }
 
 resource "aws_lb_target_group_attachment" "web2_attach" {
-  target_group_arn = aws_lb_target_group.app_tg.arn
+  target_group_arn = data.aws_lb_target_group.existing_app_tg.arn
   target_id        = aws_instance.web2.id
   port             = 5000
 }

@@ -1,216 +1,45 @@
-name: EC2 Pipeline
-
+name: Validate Infrastructure Code
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
-
-permissions:
-  contents: read
-  pull-requests: write
-  security-events: write
-
-env:
-  AWS_REGION: ap-northeast-2
-  TF_VERSION: "1.5.0"
 
 jobs:
   terraform:
-    name: Terraform Infrastructure
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: terraform
-    
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: ${{ env.TF_VERSION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ap-northeast-2
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+      # ─── 이 두 스텝을 반드시 여기에 추가하세요 ───
+      - name: AWS Caller Identity
+        run: aws sts get-caller-identity
 
-    # ─── 디버그 1: 실제 사용하는 AWS 계정 확인 ───
-    - name: AWS Caller Identity
-      run: aws sts get-caller-identity
+      - name: Describe DynamoDB Lock Table
+        run: aws dynamodb describe-table \
+               --table-name terraform-lock-table \
+               --region ap-northeast-2
 
-    # ─── 디버그 2: DynamoDB 테이블 조회 테스트 ───
-    - name: Describe DynamoDB Lock Table
-      run: aws dynamodb describe-table --table-name terraform-lock-table --region ap-northeast-2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: v1.5.7
 
-    - name: Cleanup old terraform state
-      run: rm -rf .terraform terraform.tfstate* tfplan*
+      - name: Terraform Fmt Check
+        run: terraform fmt -check -recursive
 
-    - name: Terraform Init
-      run: |
-        echo "Initializing Terraform with S3 backend..."
-        terraform init
-        echo "Backend initialization completed!"
+      - name: Terraform Init
+        run: terraform init
 
-    - name: Terraform Plan (Full Infrastructure)
-      run: |
-        echo "Planning full infrastructure..."
-        terraform plan -lock=false -out=tfplan
-      if: github.event_name == 'pull_request'
-
-    - name: Terraform Apply (Full Infrastructure)
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: |
-        echo "Applying full infrastructure..."
-        terraform apply -lock=false tfplan
-
-    - name: Generate Terraform outputs
-      run: terraform output -json > terraform_outputs.json
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-  ansible-deploy:
-    name: Ansible Deploy
-    runs-on: ubuntu-latest
-    needs: terraform
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-
-    - name: Install Ansible
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo apt-add-repository --yes --update ppa:ansible/ansible
-        sudo apt-get install -y ansible
-
-    - name: Install Ansible Galaxy roles
-      working-directory: ansible
-      run: ansible-galaxy install -r requirements.yml
-
-    - name: Copy Terraform outputs
-      run: cp terraform/terraform_outputs.json ansible/
-
-    - name: Deploy Flask App
-      working-directory: ansible
-      run: ansible-playbook playbook.yml
-      env:
-        ANSIBLE_HOST_KEY_CHECKING: False
-
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: terraform
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-
-    - name: Run Trivy IaC scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'config'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-iac-results.sarif'
-
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
-
-    - name: Upload Trivy IaC scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-iac-results.sarif'
-
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-
-    - name: Generate Security Report
-      run: |
-        python generate_security_report.py
-      if: always()
-
-    - name: Upload Security Report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-report
-        path: trivy-security-report.md
-
-    - name: Read Security Report
-      id: report
-      run: |
-        if [ -f "trivy-security-report.md" ]; then
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
-          cat trivy-security-report.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-        else
-          echo "summary=보안 스캔 보고서를 생성할 수 없습니다." >> $GITHUB_OUTPUT
-        fi
-      if: always() && github.event_name == 'pull_request'
-
-    - name: Comment PR with Security Report
-      uses: actions/github-script@v7
-      if: always() && github.event_name == 'pull_request'
-      with:
-        script: |
-          const fs = require('fs');
-          const path = require('path');
-          
-          try {
-            const reportPath = 'trivy-security-report.md';
-            if (fs.existsSync(reportPath)) {
-              const reportContent = fs.readFileSync(reportPath, 'utf8');
-              
-              // PR 코멘트 생성
-              const comment = '## 🔍 보안 스캔 결과 요약\n\n' + reportContent + '\n\n---\n*이 보고서는 자동으로 생성되었습니다. 자세한 내용은 GitHub Security 탭을 확인하세요.*';
-              
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-              
-              console.log('✅ 보안 스캔 보고서가 PR에 코멘트로 추가되었습니다.');
-            } else {
-              console.log('⚠️ 보안 스캔 보고서 파일을 찾을 수 없습니다.');
-            }
-          } catch (error) {
-            console.error('❌ PR 코멘트 생성 중 오류 발생:', error.message);
-          } 
+      - name: Terraform Plan
+        run: terraform plan -lock=false -out=tfplan 

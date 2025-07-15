@@ -21,27 +21,15 @@ spec:
         - containerPort: 5000
         env:
         - name: RDS_HOST
-          valueFrom:
-            secretKeyRef:
-              name: saju-app-secrets
-              key: rds-host
+          value: "db-G5ICKQTJ2IEYEK7CA67QULXUXE.cluster-custom.cluster-custom.ap-northeast-2.rds.amazonaws.com"
         - name: RDS_USER
-          valueFrom:
-            secretKeyRef:
-              name: saju-app-secrets
-              key: rds-user
+          value: "admin"
         - name: RDS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: saju-app-secrets
-              key: rds-password
+          value: "yourstrongpassword"
         - name: RDS_DATABASE
           value: "saju"
         - name: GEMINI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: saju-app-secrets
-              key: gemini-api-key
+          value: "AIzaSyB-lFb9w-Uy-sJtw31xlVx8ohnQpzNje4g"
         resources:
           requests:
             memory: "128Mi"
@@ -81,13 +69,5 @@ spec:
   selector:
     app: saju-app
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: saju-app-secrets
-type: Opaque
-data:
-  rds-host: <base64-encoded-rds-host>
-  rds-user: YWRtaW4=  # admin
-  rds-password: <base64-encoded-password>
-  gemini-api-key: <base64-encoded-api-key> 
+# Secret은 별도로 생성하거나 환경변수로 대체
+# 실제 운영환경에서는 AWS Secrets Manager나 HashiCorp Vault 사용 권장 

@@ -57,7 +57,12 @@
 - name: Initialize database
   shell: |
     mysql -h {{ rds_endpoint }} -u admin -p'{{ db_password }}' < /home/ubuntu/myapp/init_db.sql
-  ignore_errors: true
+  register: db_init_result
+  failed_when: false
+
+- name: Debug database initialization
+  debug:
+    var: db_init_result
 
 - name: Create environment file for Flask (.env)
   template:

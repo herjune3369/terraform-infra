@@ -77,19 +77,21 @@ jobs:
         run: |
           echo "Running Trivy IaC scan in $(pwd)"
           ls -la
-          trivy config . --format sarif --output ../trivy-iac-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
+          trivy config . --format sarif --output trivy-iac-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
           echo "Checking if result file was created:"
-          ls -la ../trivy-iac-results.sarif || echo "Result file not found"
+          ls -la trivy-iac-results.sarif || echo "Result file not found"
           echo "Creating empty result file if scan found no issues:"
-          if [ ! -f ../trivy-iac-results.sarif ]; then
-            echo '{"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0-rtm.5.json", "runs": []}' > ../trivy-iac-results.sarif
+          if [ ! -f trivy-iac-results.sarif ]; then
+            echo '{"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0-rtm.5.json", "runs": []}' > trivy-iac-results.sarif
           fi
+          echo "Final result file location:"
+          ls -la trivy-iac-results.sarif
       - name: Upload Trivy IaC results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: trivy-iac-results
-          path: trivy-iac-results.sarif
+          path: devsecops-2/terraform/trivy-iac-results.sarif
       - name: Generate Trivy IaC Summary
         if: always()
         run: |

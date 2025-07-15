@@ -2,8 +2,6 @@ provider "aws" {
   region = "ap-northeast-2"
 }
 
-# test trigger
-
 # 기존 VPC 사용
 data "aws_vpc" "existing_vpc" {
   id = var.vpc_id

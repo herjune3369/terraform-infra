@@ -127,29 +127,29 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'fs'
-        scan-ref: 'devsecops-k8s/'
+        scan-ref: '.'
         format: 'sarif'
-        output: 'devsecops-k8s/trivy-results.sarif'
+        output: 'trivy-results.sarif'
 
     - name: Run Trivy IaC scanner
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'config'
-        scan-ref: 'devsecops-k8s/'
+        scan-ref: '.'
         format: 'sarif'
-        output: 'devsecops-k8s/trivy-iac-results.sarif'
+        output: 'trivy-iac-results.sarif'
 
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
-        sarif_file: 'devsecops-k8s/trivy-results.sarif'
+        sarif_file: 'trivy-results.sarif'
 
     - name: Upload Trivy IaC scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
-        sarif_file: 'devsecops-k8s/trivy-iac-results.sarif'
+        sarif_file: 'trivy-iac-results.sarif'
 
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -158,11 +158,11 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install -r devsecops-k8s/requirements.txt
+        pip install -r requirements.txt
 
     - name: Generate Security Report
       run: |
-        python devsecops-k8s/generate_security_report.py
+        python generate_security_report.py
       if: always()
 
     - name: Upload Security Report
@@ -170,14 +170,14 @@ jobs:
       if: always()
       with:
         name: security-report
-        path: devsecops-k8s/trivy-security-report.md
+        path: trivy-security-report.md
 
     - name: Read Security Report
       id: report
       run: |
-        if [ -f "devsecops-k8s/trivy-security-report.md" ]; then
+        if [ -f "trivy-security-report.md" ]; then
           echo "summary<<EOF" >> $GITHUB_OUTPUT
-          cat devsecops-k8s/trivy-security-report.md >> $GITHUB_OUTPUT
+          cat trivy-security-report.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
         else
           echo "summary=보안 스캔 보고서를 생성할 수 없습니다." >> $GITHUB_OUTPUT
@@ -193,7 +193,7 @@ jobs:
           const path = require('path');
           
           try {
-            const reportPath = 'devsecops-k8s/trivy-security-report.md';
+            const reportPath = 'trivy-security-report.md';
             if (fs.existsSync(reportPath)) {
               const reportContent = fs.readFileSync(reportPath, 'utf8');
               

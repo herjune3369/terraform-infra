@@ -81,7 +81,7 @@ jobs:
         working-directory: devsecops-k8s/terraform
         run: |
           echo "🔍 Running Trivy IaC scan for Terraform..."
-          trivy iac --iac-type terraform . --format sarif --output trivy-iac-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
+          trivy config . --format sarif --output trivy-iac-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
           echo "✅ IaC scan completed"
           ls -la trivy-iac-results.sarif || echo "⚠️ No IaC issues found"
       

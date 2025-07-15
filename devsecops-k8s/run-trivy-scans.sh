@@ -24,7 +24,7 @@ echo ""
 echo "1️⃣ IaC 스캔 (Terraform) 실행 중..."
 echo "----------------------------------------"
 cd ../terraform
-trivy iac --iac-type terraform . --format sarif --output ../trivy-results/trivy-iac-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
+trivy config . --format sarif --output ../trivy-results/trivy-iac-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
 echo "✅ IaC 스캔 완료: trivy-iac-results.sarif"
 
 echo ""

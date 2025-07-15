@@ -18,6 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug - Show directory structure
+        run: |
+          echo "Current working directory:"
+          pwd
+          echo "Workspace structure:"
+          ls -la
+          echo "devsecops-k8s directory structure:"
+          ls -la devsecops-k8s/
+          echo "terraform directory structure:"
+          ls -la devsecops-k8s/terraform/
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:

@@ -42,57 +42,18 @@ jobs:
     - name: Cleanup old terraform state
       run: rm -rf .terraform terraform.tfstate* tfplan*
 
-    - name: Terraform Init (Local Backend)
-      run: terraform init -backend=false
-
-    - name: Terraform Plan and Apply Backend
-      run: |
-        echo "Creating backend infrastructure..."
-        terraform plan -target=aws_s3_bucket.terraform_state -target=aws_dynamodb_table.terraform_locks -out=tfplan-backend
-        terraform apply tfplan-backend
-        echo "Backend infrastructure created successfully!"
-
-    - name: Get Backend Config
-      id: backend-config
-      run: |
-        BACKEND_CONFIG=$(terraform output -json backend_config)
-        echo "backend_config=$BACKEND_CONFIG" >> $GITHUB_OUTPUT
-        echo "Backend config: $BACKEND_CONFIG"
-
     - name: Wait for DynamoDB table
       run: |
         echo "Waiting for DynamoDB table to be active..."
-        sleep 60
+        sleep 30
         echo "Checking DynamoDB table status..."
-        DYNAMODB_TABLE=$(terraform output -raw backend_config | jq -r '.dynamodb_table')
-        echo "DynamoDB table name: $DYNAMODB_TABLE"
-        aws dynamodb describe-table --table-name "$DYNAMODB_TABLE" --region ap-northeast-2
+        aws dynamodb describe-table --table-name "terraform-lock-table" --region ap-northeast-2
         echo "DynamoDB table is ready!"
 
-    - name: Terraform Init with S3 Backend
+    - name: Terraform Init
       run: |
-        BACKEND_CONFIG='${{ steps.backend-config.outputs.backend-config }}'
-        echo "Initializing with backend config: $BACKEND_CONFIG"
-        
-        BUCKET=$(echo $BACKEND_CONFIG | jq -r '.bucket')
-        DYNAMODB_TABLE=$(echo $BACKEND_CONFIG | jq -r '.dynamodb_table')
-        REGION=$(echo $BACKEND_CONFIG | jq -r '.region')
-        
-        echo "Bucket: $BUCKET"
-        echo "DynamoDB Table: $DYNAMODB_TABLE"
-        echo "Region: $REGION"
-        
-        # DynamoDB 테이블이 실제로 존재하는지 확인
-        echo "Checking if DynamoDB table exists..."
-        aws dynamodb describe-table --table-name "$DYNAMODB_TABLE" --region "$REGION"
-        
-        terraform init \
-          -backend-config="bucket=$BUCKET" \
-          -backend-config="key=terraform.tfstate" \
-          -backend-config="region=$REGION" \
-          -backend-config="dynamodb_table=$DYNAMODB_TABLE" \
-          -backend-config="encrypt=true"
-        
+        echo "Initializing Terraform with S3 backend..."
+        terraform init
         echo "Backend initialization completed!"
 
     - name: Terraform Plan (Full Infrastructure)

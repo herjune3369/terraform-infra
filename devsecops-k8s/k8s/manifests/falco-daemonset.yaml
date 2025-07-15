@@ -160,7 +160,7 @@ metadata:
 data:
   falco.yaml: |
     # Falco Configuration
-    rules_file:
+    rules_files:
       - /etc/falco/falco_rules.yaml
       - /etc/falco/rules.d/
     
@@ -193,28 +193,28 @@ data:
     - rule: Suspicious Container Creation
       desc: Detect suspicious container creation
       condition: spawned_process and container and proc.name in (bash, sh, zsh)
-      output: Suspicious container process started (user=%user.name command=%proc.cmdline container=%container.name)
+      output: Suspicious container process started (user=%user.name command=%proc.cmdline container=%container.id)
       priority: WARNING
       tags: [container, runtime]
     
     - rule: Privileged Container Started
       desc: Detect privileged container startup
       condition: container and container.privileged=true
-      output: Privileged container started (user=%user.name container=%container.name)
+      output: Privileged container started (user=%user.name container=%container.id)
       priority: WARNING
       tags: [container, security]
     
     - rule: Network Connection from Container
       desc: Detect network connections from containers
       condition: container and evt.type=connect and fd.type=ipv4
-      output: Container network connection (user=%user.name container=%container.name connection=%fd.name)
+      output: Container network connection (user=%user.name container=%container.id connection=%fd.name)
       priority: INFO
       tags: [container, network]
     
     - rule: Detect saju-app exec
       desc: Detect shell execution in saju-app container
       condition: container.image contains "saju-app" and evt.type = execve
-      output: "Shell in saju-app container (user=%user.name command=%proc.cmdline container=%container.name)"
+      output: "Shell in saju-app container (user=%user.name command=%proc.cmdline container=%container.id)"
       priority: WARNING
       tags: [container, runtime, saju-app]
     

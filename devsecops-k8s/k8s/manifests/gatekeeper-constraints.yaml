@@ -1,0 +1,118 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: sajuappsecurity
+spec:
+  crd:
+    spec:
+      names:
+        kind: SajuAppSecurity
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package sajuappsecurity
+        
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          input.review.object.metadata.labels.app == "saju-app"
+          
+          # Check for privileged containers
+          container := input.review.object.spec.containers[_]
+          container.securityContext.privileged == true
+          msg := sprintf("Privileged containers are not allowed in saju-app: %v", [container.name])
+        }
+        
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          input.review.object.metadata.labels.app == "saju-app"
+          
+          # Check for non-root user requirement
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.runAsNonRoot
+          msg := sprintf("Containers must run as non-root user in saju-app: %v", [container.name])
+        }
+        
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          input.review.object.metadata.labels.app == "saju-app"
+          
+          # Check for unauthorized ports
+          container := input.review.object.spec.containers[_]
+          port := container.ports[_]
+          not port.containerPort in [5000]
+          msg := sprintf("Unauthorized port %v is not allowed in saju-app container: %v", [port.containerPort, container.name])
+        }
+        
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          input.review.object.metadata.labels.app == "saju-app"
+          
+          # Check for resource limits
+          container := input.review.object.spec.containers[_]
+          not container.resources.limits
+          msg := sprintf("Resource limits are required for saju-app container: %v", [container.name])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: SajuAppSecurity
+metadata:
+  name: saju-app-security-policy
+spec:
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    labelSelector:
+      matchLabels:
+        app: "saju-app"
+  parameters: {}
+---
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: podsecuritypolicy
+spec:
+  crd:
+    spec:
+      names:
+        kind: PodSecurityPolicy
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package podsecuritypolicy
+        
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          
+          # Check for host network usage
+          input.review.object.spec.hostNetwork == true
+          msg := "Host network is not allowed"
+        }
+        
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          
+          # Check for host PID usage
+          input.review.object.spec.hostPID == true
+          msg := "Host PID is not allowed"
+        }
+        
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Pod"
+          
+          # Check for privileged containers
+          container := input.review.object.spec.containers[_]
+          container.securityContext.privileged == true
+          msg := sprintf("Privileged containers are not allowed: %v", [container.name])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: general-pod-security-policy
+spec:
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+  parameters: {} 

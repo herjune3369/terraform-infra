@@ -209,4 +209,18 @@ data:
       condition: container and evt.type=connect and fd.type=ipv4
       output: Container network connection (user=%user.name container=%container.name connection=%fd.name)
       priority: INFO
-      tags: [container, network] 
+      tags: [container, network]
+    
+    - rule: Detect saju-app exec
+      desc: Detect shell execution in saju-app container
+      condition: container.image contains "saju-app" and evt.type = execve
+      output: "Shell in saju-app container (user=%user.name command=%proc.cmdline container=%container.name)"
+      priority: WARNING
+      tags: [container, runtime, saju-app]
+    
+    - rule: Saju-app File Access
+      desc: Detect file access in saju-app container
+      condition: container.image contains "saju-app" and evt.type in (open, openat) and proc.name not in (python, flask)
+      output: "File access in saju-app container (user=%user.name file=%fd.name command=%proc.cmdline)"
+      priority: INFO
+      tags: [container, file-access, saju-app] 

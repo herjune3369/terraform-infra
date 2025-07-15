@@ -99,6 +99,15 @@ jobs:
           echo "✅ Kubernetes config scan completed"
           ls -la trivy-config-results.sarif || echo "⚠️ No Kubernetes config issues found"
       
+      # 2-1. 사주앱 Kubernetes 매니페스트 스캔
+      - name: Run Trivy Saju App Config Scan
+        run: |
+          echo "🔍 Running Trivy saju-app deployment scan..."
+          trivy config devsecops-k8s/k8s/manifests/saju-app-deployment.yaml \
+            --format sarif --output trivy-saju-config.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
+          echo "✅ Saju app config scan completed"
+          ls -la trivy-saju-config.sarif || echo "⚠️ No saju-app config issues found"
+      
       # 3. 컨테이너 이미지 스캔
       - name: Run Trivy Container Image Scan
         run: |
@@ -107,6 +116,16 @@ jobs:
           trivy image nginx:latest --format sarif --output trivy-image-results.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
           echo "✅ Container image scan completed"
           ls -la trivy-image-results.sarif || echo "⚠️ No container image issues found"
+      
+      # 3-1. 사주앱 컨테이너 이미지 스캔
+      - name: Run Trivy Saju App Image Scan
+        run: |
+          echo "🔍 Running Trivy saju-app image scan..."
+          # ECR 레지스트리에서 이미지 스캔
+          trivy image 483260554116.dkr.ecr.ap-northeast-2.amazonaws.com/saju-app:latest \
+            --format sarif --output trivy-saju-image.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
+          echo "✅ Saju app image scan completed"
+          ls -la trivy-saju-image.sarif || echo "⚠️ No saju-app image issues found"
       
       # 결과 파일 업로드
       - name: Upload Trivy IaC Results
@@ -129,6 +148,20 @@ jobs:
         with:
           name: trivy-image-results
           path: trivy-image-results.sarif
+      
+      - name: Upload Trivy Saju App Config Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-saju-config-results
+          path: trivy-saju-config.sarif
+      
+      - name: Upload Trivy Saju App Image Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-saju-image-results
+          path: trivy-saju-image.sarif
       
       # 종합 요약 생성
       - name: Generate Configuration Layer Summary
@@ -308,6 +341,37 @@ jobs:
           aws eks update-kubeconfig --region ap-northeast-2 --name devsecops-eks-cluster
           kubectl cluster-info
       
+      # 사주앱 컨테이너화 및 배포
+      - name: Build and Push Saju App Container
+        run: |
+          echo "🐳 Building saju-app container..."
+          cd devsecops-k8s
+          
+          # ECR 로그인
+          aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 483260554116.dkr.ecr.ap-northeast-2.amazonaws.com
+          
+          # ECR 리포지토리 생성 (없는 경우)
+          aws ecr describe-repositories --repository-names saju-app --region ap-northeast-2 || \
+          aws ecr create-repository --repository-name saju-app --region ap-northeast-2
+          
+          # 이미지 빌드 및 푸시
+          docker build -t 483260554116.dkr.ecr.ap-northeast-2.amazonaws.com/saju-app:latest .
+          docker push 483260554116.dkr.ecr.ap-northeast-2.amazonaws.com/saju-app:latest
+          echo "✅ Saju app container built and pushed successfully"
+      
+      - name: Deploy Saju App to Kubernetes
+        run: |
+          echo "🚀 Deploying saju-app to Kubernetes..."
+          
+          # 사주앱 배포
+          kubectl apply -f devsecops-k8s/k8s/manifests/saju-app-deployment.yaml
+          kubectl wait --for=condition=available --timeout=300s deployment/saju-app
+          echo "✅ Saju app deployed successfully"
+          
+          # 배포 상태 확인
+          kubectl get pods -l app=saju-app
+          kubectl get services -l app=saju-app
+      
       # 6. Trivy 스캔 (Configuration Layer)
       - name: Run Configuration Layer Scans
         run: |
@@ -328,6 +392,12 @@ jobs:
           chmod +x install-gatekeeper.sh
           ./install-gatekeeper.sh
           echo "✅ Gatekeeper Policy Layer 배포 완료"
+      
+      - name: Deploy Gatekeeper Constraints
+        run: |
+          echo "🔒 Deploying Gatekeeper constraints..."
+          kubectl apply -f devsecops-k8s/k8s/manifests/gatekeeper-constraints.yaml
+          echo "✅ Gatekeeper constraints deployed successfully"
       
       # 8. LLM 보고서 생성 & 게시
       - name: Generate 3-Layer Security Report

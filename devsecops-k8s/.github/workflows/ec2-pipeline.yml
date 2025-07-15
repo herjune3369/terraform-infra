@@ -59,14 +59,14 @@ jobs:
     - name: Terraform Plan (Full Infrastructure)
       run: |
         echo "Planning full infrastructure..."
-        terraform plan -out=tfplan
+        terraform plan -lock=false -out=tfplan
       if: github.event_name == 'pull_request'
 
     - name: Terraform Apply (Full Infrastructure)
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
         echo "Applying full infrastructure..."
-        terraform apply tfplan
+        terraform apply -lock=false tfplan
 
     - name: Generate Terraform outputs
       run: terraform output -json > terraform_outputs.json

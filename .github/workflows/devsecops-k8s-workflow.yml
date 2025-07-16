@@ -442,9 +442,19 @@ jobs:
           ./install-gatekeeper.sh
           echo "✅ Gatekeeper Policy Layer 배포 완료"
       
+      - name: Wait for Gatekeeper CRDs
+        run: |
+          echo "⏳ Waiting for Gatekeeper CRDs to be ready..."
+          kubectl wait --for=condition=established --timeout=300s crd/constrainttemplates.templates.gatekeeper.sh
+          kubectl wait --for=condition=established --timeout=300s crd/constraints.constraints.gatekeeper.sh
+          echo "✅ Gatekeeper CRDs are ready"
+      
       - name: Deploy Gatekeeper Constraints
         run: |
           echo "🔒 Deploying Gatekeeper constraints..."
+          # CRD 확인 후 Constraint 배포
+          kubectl get crd constrainttemplates.templates.gatekeeper.sh
+          kubectl get crd constraints.constraints.gatekeeper.sh
           kubectl apply -f devsecops-k8s/k8s/manifests/gatekeeper-constraints.yaml
           echo "✅ Gatekeeper constraints deployed successfully"
       

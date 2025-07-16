@@ -134,6 +134,16 @@ jobs:
           echo "✅ Saju app image scan completed"
           ls -la trivy-saju-image.sarif || echo "⚠️ No saju-app image issues found"
       
+      # 3-2. Trivy Runtime 스캔 (실행 중인 컨테이너 감지)
+      - name: Run Trivy Runtime Scan
+        run: |
+          echo "🔍 Running Trivy runtime scan for running containers..."
+          # 실행 중인 컨테이너 감지 및 스캔
+          trivy image --runtime-scan saju-app:latest \
+            --format sarif --output trivy-runtime-scan.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
+          echo "✅ Runtime scan completed"
+          ls -la trivy-runtime-scan.sarif || echo "⚠️ No runtime issues found"
+      
       # 결과 파일 업로드
       - name: Upload Trivy IaC Results
         if: always()
@@ -170,6 +180,13 @@ jobs:
           name: trivy-saju-image-results
           path: trivy-saju-image.sarif
       
+      - name: Upload Trivy Runtime Scan Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-runtime-scan-results
+          path: trivy-runtime-scan.sarif
+      
       # 종합 요약 생성
       - name: Generate Configuration Layer Summary
         if: always()
@@ -196,6 +213,13 @@ jobs:
             echo "✅ **Container Image Scan**: Completed" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Container Image Scan**: Failed or no results" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Runtime 스캔 결과
+          if [ -f trivy-runtime-scan.sarif ]; then
+            echo "✅ **Runtime Scan**: Completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Runtime Scan**: Failed or no results" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -399,12 +423,15 @@ jobs:
           echo "✅ ECR saju-app image scan completed"
           ls -la trivy-ecr-saju-image.sarif || echo "⚠️ No ECR image issues found"
       
-      # 7. Falco & Gatekeeper 배포 (Runtime & Policy Layer)
-      - name: Deploy Runtime Layer (Falco)
+      # 7. Trivy Runtime 스캔 (Runtime Layer - Falco 대체)
+      - name: Run Trivy Runtime Security Scan
         run: |
-          kubectl apply -f devsecops-k8s/k8s/manifests/falco-daemonset.yaml
-          kubectl wait --for=condition=ready pod -l app=falco -n falco --timeout=300s
-          echo "✅ Falco Runtime Layer 배포 완료"
+          echo "🔍 Running Trivy runtime security scan..."
+          # 실행 중인 컨테이너에 대한 런타임 보안 스캔
+          trivy image --runtime-scan 483260554116.dkr.ecr.ap-northeast-2.amazonaws.com/saju-app:latest \
+            --format sarif --output trivy-runtime-security.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
+          echo "✅ Trivy Runtime Security Layer 스캔 완료"
+          ls -la trivy-runtime-security.sarif || echo "⚠️ No runtime security issues found"
       
       - name: Deploy Policy Layer (Gatekeeper)
         run: |

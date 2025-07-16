@@ -453,7 +453,6 @@ jobs:
           echo "🔒 Deploying Gatekeeper constraints..."
           # CRD 확인 후 Constraint 배포
           kubectl get crd constrainttemplates.templates.gatekeeper.sh
-          kubectl get crd constraints.constraints.gatekeeper.sh
           kubectl apply -f devsecops-k8s/k8s/manifests/gatekeeper-constraints.yaml
           echo "✅ Gatekeeper constraints deployed successfully"
       

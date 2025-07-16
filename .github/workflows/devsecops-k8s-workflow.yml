@@ -448,24 +448,18 @@ jobs:
           kubectl wait --for=condition=established --timeout=300s crd/constrainttemplates.templates.gatekeeper.sh
           echo "✅ Gatekeeper CRDs are ready"
       
-      - name: Deploy Gatekeeper Constraints
+      - name: Apply Gatekeeper ConstraintTemplates
         run: |
-          echo "🔒 Deploying Gatekeeper constraints..."
-          # CRD 확인 후 Constraint 배포
-          kubectl get crd constrainttemplates.templates.gatekeeper.sh
-          
-          # 1. ConstraintTemplate을 먼저 적용
-          echo "📋 Applying ConstraintTemplates..."
           kubectl apply -f devsecops-k8s/k8s/manifests/gatekeeper-constrainttemplates.yaml
-          
-          # 2. 잠시 대기 (ConstraintTemplate 처리 시간)
-          echo "⏳ Waiting for ConstraintTemplates to be processed..."
-          sleep 30
-          
-          # 3. 이제 Constraint 적용
-          echo "🔒 Applying Constraints..."
+
+      - name: Wait for Gatekeeper CRDs to be registered
+        run: |
+          echo "⏳ Waiting for Gatekeeper CRDs to be registered..."
+          sleep 60
+
+      - name: Apply Gatekeeper Constraints
+        run: |
           kubectl apply -f devsecops-k8s/k8s/manifests/gatekeeper-constraints.yaml
-          echo "✅ Gatekeeper constraints deployed successfully"
       
       # 8. LLM 보고서 생성 & 게시
       - name: Generate 3-Layer Security Report

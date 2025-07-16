@@ -446,7 +446,6 @@ jobs:
         run: |
           echo "⏳ Waiting for Gatekeeper CRDs to be ready..."
           kubectl wait --for=condition=established --timeout=300s crd/constrainttemplates.templates.gatekeeper.sh
-          kubectl wait --for=condition=established --timeout=300s crd/constraints.constraints.gatekeeper.sh
           echo "✅ Gatekeeper CRDs are ready"
       
       - name: Deploy Gatekeeper Constraints

@@ -458,10 +458,9 @@ jobs:
           echo "📋 Applying ConstraintTemplates..."
           kubectl apply -f devsecops-k8s/k8s/manifests/gatekeeper-constrainttemplates.yaml
           
-          # 2. ConstraintTemplate이 준비될 때까지 대기
-          echo "⏳ Waiting for ConstraintTemplates to be ready..."
-          kubectl wait --for=condition=established --timeout=60s crd/sajuappsecurities.constraints.gatekeeper.sh
-          kubectl wait --for=condition=established --timeout=60s crd/podsecuritypolicies.constraints.gatekeeper.sh
+          # 2. 잠시 대기 (ConstraintTemplate 처리 시간)
+          echo "⏳ Waiting for ConstraintTemplates to be processed..."
+          sleep 30
           
           # 3. 이제 Constraint 적용
           echo "🔒 Applying Constraints..."

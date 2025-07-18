@@ -21,7 +21,7 @@ spec:
         - containerPort: 5000
         env:
         - name: RDS_HOST
-          value: "db-G5ICKQTJ2IEYEK7CA67QULXUXE.cluster-custom.cluster-custom.ap-northeast-2.rds.amazonaws.com"
+          value: "flask-db.czos9xo3nzg2.ap-northeast-2.rds.amazonaws.com"
         - name: RDS_USER
           value: "admin"
         - name: RDS_PASSWORD
@@ -49,10 +49,9 @@ spec:
             port: 5000
           initialDelaySeconds: 5
           periodSeconds: 5
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
 ---
 apiVersion: v1
 kind: Service
@@ -61,7 +60,7 @@ metadata:
   labels:
     app: saju-app
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
   - port: 80
     targetPort: 5000

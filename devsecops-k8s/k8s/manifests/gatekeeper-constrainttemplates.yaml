@@ -39,7 +39,7 @@ spec:
           # Check for unauthorized ports
           container := input.review.object.spec.containers[_]
           port := container.ports[_]
-          not port.containerPort in [5000]
+          not port.containerPort == 5000
           msg := sprintf("Unauthorized port %v is not allowed in saju-app container: %v", [port.containerPort, container.name])
         }
         

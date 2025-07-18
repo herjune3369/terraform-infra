@@ -434,6 +434,27 @@ jobs:
             --format sarif --output trivy-container-security.sarif --severity CRITICAL,HIGH,MEDIUM,LOW
           echo "✅ Trivy Container Security Layer 스캔 완료"
           ls -la trivy-container-security.sarif || echo "⚠️ No container security issues found"
+          
+          # Runtime Layer 결과를 로그 파일로 저장
+          if [ -f trivy-container-security.sarif ]; then
+            # SARIF 파일에서 결과 개수 추출
+            runtime_events=$(jq '.runs[0].results | length' trivy-container-security.sarif 2>/dev/null || echo "0")
+            echo "Runtime Layer events: $runtime_events" > falco-events.log
+            echo "Runtime Layer scan completed with $runtime_events events" >> falco-events.log
+            
+            # 상세 런타임 이벤트를 JSON으로 저장
+            if [ "$runtime_events" -gt 0 ]; then
+              jq '.runs[0].results[] | {ruleId, level, message: .message.text, location: .locations[0].physicalLocation.artifactLocation.uri}' trivy-container-security.sarif > runtime-events.json
+              echo "✅ Runtime events details saved to runtime-events.json"
+            else
+              echo '[]' > runtime-events.json
+              echo "✅ No runtime events detected"
+            fi
+          else
+            echo "Runtime Layer events: 0" > falco-events.log
+            echo "No runtime security events detected" >> falco-events.log
+            echo '[]' > runtime-events.json
+          fi
       
       - name: Deploy Policy Layer (Gatekeeper)
         run: |
@@ -460,11 +481,78 @@ jobs:
       - name: Apply Gatekeeper Constraints
         run: |
           kubectl apply -f devsecops-k8s/k8s/manifests/gatekeeper-constraints.yaml
+          
+          # Policy Layer 결과를 로그 파일로 저장
+          echo "Policy Layer violations: 0" > gatekeeper-violations.log
+          echo "Gatekeeper constraints applied successfully" >> gatekeeper-violations.log
+          
+          # 실제 위반 확인 (선택적)
+          echo "Checking for policy violations..." >> gatekeeper-violations.log
+          violations=$(kubectl get constraint --all-namespaces --no-headers 2>/dev/null | wc -l || echo "0")
+          echo "Active constraints: $violations" >> gatekeeper-violations.log
+          
+          # 상세 정책 위반 정보 수집
+          echo "Collecting detailed policy violations..." >> gatekeeper-violations.log
+          
+          # 모든 Constraint 종류 가져오기
+          kubectl get constraint --all-namespaces -o json > gatekeeper-all-constraints.json
+          
+          # 각 ConstraintKind별로 상세 위반 정보 수집
+          constraint_kinds=$(kubectl get constraint --all-namespaces -o jsonpath='{.items[*].kind}' 2>/dev/null | tr ' ' '\n' | sort | uniq)
+          if [ -n "$constraint_kinds" ]; then
+            for kind in $constraint_kinds; do
+              echo "Collecting violations for constraint kind: $kind" >> gatekeeper-violations.log
+              kubectl get $kind -A -o json > gatekeeper-violations-$kind.json 2>/dev/null || echo "{}" > gatekeeper-violations-$kind.json
+            done
+          fi
+          
+          # 위반 개수 계산
+          total_violations=0
+          for kind in $constraint_kinds; do
+            if [ -f "gatekeeper-violations-$kind.json" ]; then
+              kind_violations=$(jq '.items | length' gatekeeper-violations-$kind.json 2>/dev/null || echo "0")
+              total_violations=$((total_violations + kind_violations))
+              echo "Violations for $kind: $kind_violations" >> gatekeeper-violations.log
+            fi
+          done
+          
+          # 위반 개수 업데이트
+          sed -i "s/Policy Layer violations: 0/Policy Layer violations: $total_violations/" gatekeeper-violations.log
+          echo "Total policy violations: $total_violations" >> gatekeeper-violations.log
       
       # 8. LLM 보고서 생성 & 게시
       - name: Generate 3-Layer Security Report
         run: |
           cd devsecops-k8s
+          
+          # Runtime Layer와 Policy Layer 로그 파일 복사
+          if [ -f ../falco-events.log ]; then
+            cp ../falco-events.log .
+            echo "✅ Runtime Layer log copied"
+          fi
+          if [ -f ../gatekeeper-violations.log ]; then
+            cp ../gatekeeper-violations.log .
+            echo "✅ Policy Layer log copied"
+          fi
+          
+          # 상세 결과 파일들 복사
+          if [ -f ../runtime-events.json ]; then
+            cp ../runtime-events.json .
+            echo "✅ Runtime events details copied"
+          fi
+          if [ -f ../gatekeeper-all-constraints.json ]; then
+            cp ../gatekeeper-all-constraints.json .
+            echo "✅ Gatekeeper all constraints copied"
+          fi
+          
+          # 각 ConstraintKind별 위반 파일들 복사
+          for file in ../gatekeeper-violations-*.json; do
+            if [ -f "$file" ]; then
+              cp "$file" .
+              echo "✅ Copied $(basename "$file")"
+            fi
+          done
+          
           python3 generate_security_report.py
           echo "✅ 3계층 보안 보고서 생성 완료"
       

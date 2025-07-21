@@ -29,9 +29,6 @@ jobs:
   validate:
     name: Validate Infrastructure Code
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./devops-1
     
     steps:
     - name: Checkout code
@@ -50,27 +47,21 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
     
     - name: Debug 파일 구조
+      working-directory: ./devops-1
       run: |
         echo "🏷️ 현재 작업 디렉터리: $(pwd)"
-        echo "📂 리포지토리 구조 전체:"
+        echo "📂 devops-1 폴더 구조:"
         ls -la
         echo ""
-        echo "📁 devops-1 폴더 확인:"
-        if [ -d "devops-1" ]; then
-          ls -la devops-1/
+        echo "📁 terraform 폴더 확인:"
+        if [ -d "terraform" ]; then
+          ls -la terraform/
           echo ""
-          echo "📁 devops-1/terraform 폴더 확인:"
-          if [ -d "devops-1/terraform" ]; then
-            ls -la devops-1/terraform/
-          else
-            echo "❌ devops-1/terraform 폴더가 없습니다!"
-          fi
+          echo "🔍 .tf 파일 검색:"
+          find terraform -name "*.tf" -type f 2>/dev/null || echo "No .tf files found"
         else
-          echo "❌ devops-1 폴더가 없습니다!"
+          echo "❌ terraform 폴더가 없습니다!"
         fi
-        echo ""
-        echo "🔍 .tf 파일 검색:"
-        find . -name "*.tf" -type f 2>/dev/null || echo "No .tf files found"
     
     - name: Terraform Format Check
       working-directory: ./devops-1/terraform
@@ -89,6 +80,12 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
+    
+    - name: Upload Terraform Plan
+      uses: actions/upload-artifact@v3
+      with:
+        name: terraform-plan
+        path: ./devops-1/terraform/tfplan
 
   # Security scan removed - DevSecOps project handles security scanning
 
@@ -97,9 +94,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    defaults:
-      run:
-        working-directory: ./devops-1
     
     steps:
     - name: Checkout code
@@ -117,15 +111,23 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
     
+    - name: Download Terraform Plan
+      uses: actions/download-artifact@v3
+      with:
+        name: terraform-plan
+        path: ./devops-1/terraform/
+    
     - name: Terraform Init
       working-directory: ./devops-1/terraform
       run: terraform init
     
     - name: Terraform Apply
       working-directory: ./devops-1/terraform
-      run: terraform apply -auto-approve
+      run: terraform apply tfplan
       env:
-        TF_VAR_environment: ${{ github.event.inputs.environment || 'dev' }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
     
     - name: Save Terraform outputs
       working-directory: ./devops-1/terraform
@@ -140,9 +142,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy-infrastructure]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    defaults:
-      run:
-        working-directory: ./devops-1
     
     steps:
     - name: Checkout code
@@ -182,13 +181,20 @@ jobs:
       working-directory: ./devops-1/ansible
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/saju_key
-        chmod 600 ~/.ssh/saju_key
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
         eval "$(ssh-agent -s)"
-        ssh-add ~/.ssh/saju_key
+        ssh-add ~/.ssh/id_rsa
         echo "SSH key setup completed"
+        echo "🔑 SSH 키 정보:"
         ls -la ~/.ssh/
         ssh-add -l
+        echo ""
+        echo "🔍 AWS 키 페어 정보:"
+        aws ec2 describe-key-pairs --query 'KeyPairs[?contains(KeyName, `saju-app-key`)].{KeyName:KeyName,KeyFingerprint:KeyFingerprint}' --output table
+        echo ""
+        echo "🔍 SSH 키 지문 확인:"
+        ssh-keygen -lf ~/.ssh/id_rsa || echo "SSH 키 지문 확인 실패"
     
     - name: Debug AWS EC2 inventory
       working-directory: ./devops-1/ansible
@@ -197,15 +203,40 @@ jobs:
         ansible-inventory -i inventories/aws_ec2.yml --list
         echo "✅ AWS EC2 inventory test completed"
         
-        echo "🔍 Testing SSH connection to webserver1..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ubuntu@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver1" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
+        echo "🔍 Getting EC2 instance information..."
+        WEB1_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver1" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+        WEB2_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver2" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
         
-        echo "🔍 Testing SSH connection to webserver2..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/saju_key -v ubuntu@$(aws ec2 describe-instances --filters "Name=tag:Name,Values=webserver2" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text) "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
+        echo "🌐 Webserver1 IP: $WEB1_IP"
+        echo "🌐 Webserver2 IP: $WEB2_IP"
+        
+        if [ "$WEB1_IP" != "None" ] && [ "$WEB1_IP" != "" ]; then
+          echo "🔍 Testing SSH connection to webserver1 ($WEB1_IP)..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_rsa -v ubuntu@$WEB1_IP "echo 'SSH connection successful'" || echo "SSH connection to webserver1 failed"
+        else
+          echo "❌ Webserver1 IP not found or instance not running"
+        fi
+        
+        if [ "$WEB2_IP" != "None" ] && [ "$WEB2_IP" != "" ]; then
+          echo "🔍 Testing SSH connection to webserver2 ($WEB2_IP)..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_rsa -v ubuntu@$WEB2_IP "echo 'SSH connection successful'" || echo "SSH connection to webserver2 failed"
+        else
+          echo "❌ Webserver2 IP not found or instance not running"
+        fi
     
     - name: Deploy with Ansible
       working-directory: ./devops-1/ansible
-      run: ansible-playbook -i inventories/aws_ec2.yml playbook.yml -e "env=${{ github.event.inputs.environment || 'dev' }}" --private-key ~/.ssh/saju_key
+      run: |
+        echo "🚀 Ansible 배포 시작..."
+        echo "📁 현재 작업 디렉터리: $(pwd)"
+        echo "🔑 SSH 키 경로: ~/.ssh/id_rsa"
+        echo "📋 인벤토리 파일: inventories/aws_ec2.yml"
+        echo "📄 플레이북 파일: playbook.yml"
+        
+        ansible-playbook -i inventories/aws_ec2.yml playbook.yml \
+          -e "env=${{ github.event.inputs.environment || 'dev' }}" \
+          --private-key ~/.ssh/id_rsa \
+          -v
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
 

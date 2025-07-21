@@ -91,6 +91,14 @@
     group: ubuntu
     mode: '0644'
 
+- name: Copy report_generator.py
+  copy:
+    src: report_generator.py
+    dest: /home/ubuntu/myapp/report_generator.py
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
 - name: Create uploads directory
   file:
     path: /home/ubuntu/myapp/uploads

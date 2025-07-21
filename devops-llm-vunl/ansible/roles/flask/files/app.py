@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 import uuid
 from datetime import datetime
-from vulnService import create_report, get_report, list_reports, delete_report
+from vulnService import create_report, get_report, list_reports, delete_report, generate_final_report_md
 
 # 환경변수 로딩
 load_dotenv()
@@ -230,6 +230,35 @@ def delete_vuln_report(report_id):
             return jsonify({"error": "보고서 삭제에 실패했습니다"}), 500
         
         return jsonify({"message": "보고서가 성공적으로 삭제되었습니다"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/vuln/report/<report_id>/final', methods=['GET'])
+def get_final_report(report_id):
+    """최종 보안 취약점 준수 강화 리포트 다운로드 API 엔드포인트"""
+    try:
+        # 경로 파라미터에서 report_id 추출
+        report_id = request.view_args['report_id']
+        
+        # 대상 시스템 파라미터 (선택사항)
+        target_system = request.args.get('target_system', '웹 애플리케이션')
+        
+        # 최종 보고서 생성
+        final_report = generate_final_report_md(report_id, target_system)
+        
+        # 파일명 생성
+        filename = f"security_vulnerability_report_{report_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        
+        # 응답 헤더 설정 (파일 다운로드용)
+        response = app.response_class(
+            response=final_report,
+            status=200,
+            mimetype='text/markdown'
+        )
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500

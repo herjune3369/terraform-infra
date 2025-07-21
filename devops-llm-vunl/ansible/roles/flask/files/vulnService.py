@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from llm_client import LLMClient
+from report_generator import generate_final_report
 
 # 환경변수 로딩
 load_dotenv()
@@ -299,6 +300,45 @@ class VulnService:
             
         except Exception as e:
             raise Exception(f"보고서 삭제 실패: {str(e)}")
+    
+    def generate_final_report(self, report_id: str, target_system: str = "웹 애플리케이션") -> str:
+        """
+        최종 보안 취약점 준수 강화 리포트 생성
+        
+        Args:
+            report_id: 보고서 ID
+            target_system: 대상 시스템명
+            
+        Returns:
+            str: Markdown 형식의 최종 보고서
+            
+        Raises:
+            Exception: 보고서 생성 실패 시
+        """
+        try:
+            # 1. DB에서 취약점 데이터 조회
+            report_data = self.get_report(report_id)
+            if not report_data:
+                raise Exception("보고서를 찾을 수 없습니다.")
+            
+            vulnerabilities = report_data.get('vulnerabilities', [])
+            if not vulnerabilities:
+                raise Exception("취약점 데이터가 없습니다.")
+            
+            # 2. 이미지 파일명 조회
+            image_filename = report_data.get('image_filename', 'unknown.jpg')
+            
+            # 3. 최종 보고서 생성
+            final_report = generate_final_report(
+                vuln_list=vulnerabilities,
+                target_system=target_system,
+                image_filename=image_filename
+            )
+            
+            return final_report
+            
+        except Exception as e:
+            raise Exception(f"최종 보고서 생성 실패: {str(e)}")
 
 
 # 전역 인스턴스 생성
@@ -323,4 +363,8 @@ def list_reports(limit: int = 10) -> List[Dict]:
 
 def delete_report(report_id: str) -> bool:
     """보고서 삭제 편의 함수"""
-    return vuln_service.delete_report(report_id) 
+    return vuln_service.delete_report(report_id)
+
+def generate_final_report_md(report_id: str, target_system: str = "웹 애플리케이션") -> str:
+    """최종 보고서 생성 편의 함수"""
+    return vuln_service.generate_final_report(report_id, target_system) 

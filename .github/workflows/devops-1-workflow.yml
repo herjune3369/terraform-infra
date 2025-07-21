@@ -5,10 +5,12 @@ on:
     branches: [ main, develop, devops-1 ]
     paths:
       - 'devops-1/**'
+      - '.github/workflows/devops-1-workflow.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'devops-1/**'
+      - '.github/workflows/devops-1-workflow.yml'
   workflow_dispatch:
     inputs:
       environment:

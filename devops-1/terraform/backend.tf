@@ -1,10 +1,10 @@
 
 terraform {
   backend "s3" {
-    bucket         = "terraform-state-junheo-20250611"
-    key            = "ai-saju-app/terraform.tfstate"
+    bucket         = "terraform-state-junheo-devops1-2024"
+    key            = "devops-1/terraform.tfstate"
     region         = "ap-northeast-2"
-    dynamodb_table = "terraform-state-lock"
+    dynamodb_table = "terraform-state-lock-devops1"
     encrypt        = true
   }
   required_providers {

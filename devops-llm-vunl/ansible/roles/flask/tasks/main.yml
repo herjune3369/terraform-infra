@@ -75,6 +75,30 @@
     group: ubuntu
     mode: '0755'
 
+- name: Copy vulnService.py
+  copy:
+    src: vulnService.py
+    dest: /home/ubuntu/myapp/vulnService.py
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Copy llm_client.py
+  copy:
+    src: llm_client.py
+    dest: /home/ubuntu/myapp/llm_client.py
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Create uploads directory
+  file:
+    path: /home/ubuntu/myapp/uploads
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
 - name: Kill existing Flask app if running
   shell: "pkill -f app.py"
   ignore_errors: true

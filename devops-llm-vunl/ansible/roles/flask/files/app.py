@@ -81,8 +81,7 @@ def vuln_analyze():
             return jsonify({"error": "지원하지 않는 파일 형식입니다"}), 400
         
         # 새로운 VulnService를 사용하여 보고서 생성
-        import asyncio
-        report_id = asyncio.run(create_report(file))
+        report_id = create_report(file)
         
         return jsonify({"reportId": report_id}), 200
         

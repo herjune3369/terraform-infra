@@ -20,7 +20,7 @@ class VulnService:
         self.rds_database = os.getenv("RDS_DATABASE", "saju")
         self.llm_client = LLMClient()
     
-    async def create_report(self, file) -> str:
+    def create_report(self, file) -> str:
         """
         취약점 분석 보고서 생성
         
@@ -35,7 +35,7 @@ class VulnService:
         """
         try:
             # 1. LLM을 사용하여 취약점 분석
-            vuln_list = await self._analyze_vuln_image(file)
+            vuln_list = self._analyze_vuln_image(file)
             
             if not vuln_list:
                 raise Exception("취약점 분석 결과가 없습니다.")
@@ -47,14 +47,14 @@ class VulnService:
             filename = self._save_uploaded_file(file, report_id)
             
             # 4. DB에 각 취약점 정보 저장
-            await self._save_vuln_reports_to_db(report_id, vuln_list, filename)
+            self._save_vuln_reports_to_db(report_id, vuln_list, filename)
             
             return report_id
             
         except Exception as e:
             raise Exception(f"보고서 생성 실패: {str(e)}")
     
-    async def _analyze_vuln_image(self, file) -> List[Dict]:
+    def _analyze_vuln_image(self, file) -> List[Dict]:
         """
         LLM을 사용하여 이미지에서 취약점 분석
         
@@ -109,7 +109,7 @@ class VulnService:
         except Exception as e:
             raise Exception(f"파일 저장 실패: {str(e)}")
     
-    async def _save_vuln_reports_to_db(self, report_id: str, vuln_list: List[Dict], filename: str):
+    def _save_vuln_reports_to_db(self, report_id: str, vuln_list: List[Dict], filename: str):
         """
         취약점 분석 결과를 DB에 저장
         
@@ -306,9 +306,9 @@ vuln_service = VulnService()
 
 
 # 편의 함수들
-async def create_report(file) -> str:
+def create_report(file) -> str:
     """보고서 생성 편의 함수"""
-    return await vuln_service.create_report(file)
+    return vuln_service.create_report(file)
 
 
 def get_report(report_id: str) -> Optional[Dict]:

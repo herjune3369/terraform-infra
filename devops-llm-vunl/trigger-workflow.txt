@@ -1,0 +1,8 @@
+# GitHub Actions 트리거 파일 - devops-llm-vunl
+# 이 파일은 devops-llm-vunl 폴더의 변경을 감지하여 워크플로우를 실행하기 위한 것입니다.
+# 배포 완료 후 삭제됩니다.
+
+생성 시간: $(date)
+목적: GitHub Actions 워크플로우 트리거 (devops-llm-vunl)
+상태: 새로운 프로젝트 시작
+특징: devops-1과 동일한 인프라, 별도 백엔드 사용 

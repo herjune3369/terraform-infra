@@ -9,13 +9,7 @@ from vulnService import create_report, get_report, list_reports, delete_report
 # 환경변수 로딩
 load_dotenv()
 
-RDS_HOST = os.getenv("RDS_HOST")
-RDS_USER = os.getenv("RDS_USER", "admin")
-RDS_PASSWORD = os.getenv("RDS_PASSWORD", "yourstrongpassword")
-RDS_DATABASE = os.getenv("RDS_DATABASE", "saju")
-
-API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyB-lFb9w-Uy-sJtw31xlVx8ohnQpzNje4g")
-GEN_URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={API_KEY}"
+# 환경변수는 vulnService.py에서 사용됨
 
 app = Flask(__name__)
 
@@ -33,36 +27,141 @@ def allowed_file(filename):
 
 
 HTML_FORM = """
-<h2>Gemini 사주풀이</h2>
-<form method='POST'>
-이름: <input name='name'><br>
-생일: <input name='birth'><br>
-시간 (0~23): <input name='hour'><br>
-력 구분:
-  <input type='radio' name='calendar' value='양력' checked> 양력
-  <input type='radio' name='calendar' value='음력'> 음력
-<br>
-<input type='submit' value='사주 풀이'>
-</form>
-<br><a href='/logs'><button>최근 이력 보기</button></a>
-<hr>
-<pre>{{ result }}</pre>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps LLM VUNL - 웹 취약점 분석</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .upload-form { border: 2px dashed #3498db; padding: 40px; text-align: center; margin: 20px 0; border-radius: 8px; background-color: #ecf0f1; }
+        .upload-form input[type="file"] { margin: 20px 0; padding: 10px; width: 300px; }
+        .upload-form button { background-color: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .upload-form button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .loading { text-align: center; padding: 20px; color: #7f8c8d; }
+        .report-link { margin-top: 20px; padding: 15px; background-color: #27ae60; color: white; text-decoration: none; border-radius: 4px; display: inline-block; }
+        .reports-list { margin-top: 30px; }
+        .report-item { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; background-color: #f8f9fa; }
+        .api-info { background-color: #e8f4f8; padding: 20px; border-radius: 5px; margin: 20px 0; }
+        .api-info h3 { color: #2980b9; margin-top: 0; }
+        .api-info code { background-color: #f1f1f1; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 DevOps LLM VUNL</h1>
+        <h2 style="text-align: center; color: #e74c3c;">웹 취약점 진단 이미지 분석 시스템</h2>
+        
+        <div class="upload-form">
+            <h3>📸 취약점 스캔 이미지 업로드</h3>
+            <form id="uploadForm">
+                <input type="file" id="imageFile" accept="image/*" required>
+                <br>
+                <button type="submit" id="analyzeBtn">🚀 분석 시작</button>
+            </form>
+            <div id="loading" class="loading" style="display: none;">🔄 분석 중입니다. 잠시만 기다려주세요...</div>
+            <div id="result"></div>
+        </div>
+
+        <div class="reports-list">
+            <h3>📊 최근 분석 보고서</h3>
+            <div id="reportsList">로딩 중...</div>
+        </div>
+
+        <div class="api-info">
+            <h3>🔧 API 정보</h3>
+            <p><strong>POST /api/vuln/analyze</strong> - 이미지 업로드 및 분석</p>
+            <p><strong>GET /api/vuln/report/:id</strong> - 분석 결과 조회</p>
+            <p><strong>GET /api/vuln/reports</strong> - 보고서 목록 조회</p>
+            <p><strong>DELETE /api/vuln/report/:id</strong> - 보고서 삭제</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('imageFile');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            if (!fileInput.files[0]) {
+                alert('파일을 선택해주세요.');
+                return;
+            }
+            
+            analyzeBtn.disabled = true;
+            loading.style.display = 'block';
+            result.innerHTML = '';
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            try {
+                const response = await fetch('/api/vuln/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    result.innerHTML = `
+                        <div class="report-link">
+                            <a href="/reports/${data.reportId}" style="color: white; text-decoration: none;">
+                                📊 분석 완료! 보고서 보기
+                            </a>
+                        </div>
+                    `;
+                    loadReports(); // 보고서 목록 새로고침
+                } else {
+                    result.innerHTML = `<div style="color: red;">❌ 오류: ${data.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div style="color: red;">❌ 네트워크 오류: ${error.message}</div>`;
+            } finally {
+                analyzeBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+        
+        async function loadReports() {
+            try {
+                const response = await fetch('/api/vuln/reports?limit=5');
+                const data = await response.json();
+                
+                const reportsList = document.getElementById('reportsList');
+                
+                if (data.reports && data.reports.length > 0) {
+                    reportsList.innerHTML = data.reports.map(report => `
+                        <div class="report-item">
+                            <strong>📋 보고서 ID:</strong> ${report.report_id}<br>
+                            <strong>📁 파일:</strong> ${report.image_filename}<br>
+                            <strong>🔍 취약점 수:</strong> ${report.vulnerability_count}<br>
+                            <strong>📅 생성일:</strong> ${new Date(report.created_at).toLocaleString()}<br>
+                            <a href="/reports/${report.report_id}" style="color: #3498db;">보고서 보기</a>
+                        </div>
+                    `).join('');
+                } else {
+                    reportsList.innerHTML = '<p>아직 분석된 보고서가 없습니다.</p>';
+                }
+            } catch (error) {
+                document.getElementById('reportsList').innerHTML = '<p style="color: red;">보고서 목록을 불러올 수 없습니다.</p>';
+            }
+        }
+        
+        // 페이지 로드 시 보고서 목록 불러오기
+        loadReports();
+    </script>
+</body>
+</html>
 """
 
-def save_to_db(name, birth, hour, result):
-    conn = pymysql.connect(
-        host=RDS_HOST,
-        user=RDS_USER,
-        password=RDS_PASSWORD,
-        database=RDS_DATABASE
-    )
-    with conn.cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO logs (name, birth, hour, result) VALUES (%s, %s, %s, %s)",
-            (name, birth, hour, result)
-        )
-        conn.commit()
-    conn.close()
+
 
 @app.route('/api/vuln/analyze', methods=['POST'])
 def vuln_analyze():
@@ -135,80 +234,111 @@ def delete_vuln_report(report_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def home():
-    result = ""
-    if request.method == 'POST':
-        name = request.form['name']
-        birth = request.form['birth']
-        hour = request.form['hour']
-        calendar = request.form['calendar']
-        prompt = f"{birth} {hour}시에 태어난 {name}의 사주를 {calendar} 기준 한국 전통 방식으로 자세히 풀어줘."
+    """메인 페이지 - 취약점 진단 시스템"""
+    return render_template_string(HTML_FORM)
 
-        try:
-            headers = {"Content-Type": "application/json"}
-            body = {
-                "contents": [
-                    {
-                        "role": "user",
-                        "parts": [
-                            {"text": prompt}
-                        ]
-                    }
-                ]
-            }
-            res = requests.post(GEN_URL, headers=headers, data=json.dumps(body))
-            res.raise_for_status()
-            result = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-            save_to_db(name, f"{calendar} {birth}", hour, result)
-        except Exception as e:
-            result = f"[오류 발생] {str(e)}"
-    return render_template_string(HTML_FORM, result=result)
-
-@app.route('/logs')
-def logs():
-    conn = pymysql.connect(
-        host=RDS_HOST,
-        user=RDS_USER,
-        password=RDS_PASSWORD,
-        database=RDS_DATABASE
-    )
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT id, name, birth, hour, created_at FROM logs ORDER BY created_at DESC LIMIT 10")
-        rows = cursor.fetchall()
-    conn.close()
-
-    table = "<h2>최근 사주 풀이 이력</h2><ul>"
-    for r in rows:
-        table += f"<li><a href='/logs/{r[0]}'>{r[1]} ({r[2]} {r[3]}시) - {r[4]}</a></li>"
-    table += "</ul><br><a href='/'><button>← 돌아가기</button></a>"
-    return table
-
-@app.route('/logs/<int:log_id>')
-def log_detail(log_id):
-    conn = pymysql.connect(
-        host=RDS_HOST,
-        user=RDS_USER,
-        password=RDS_PASSWORD,
-        database=RDS_DATABASE
-    )
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT name, birth, hour, result, created_at FROM logs WHERE id = %s", (log_id,))
-        row = cursor.fetchone()
-    conn.close()
-
-    if not row:
-        return "<h3>기록을 찾을 수 없습니다.</h3><a href='/logs'>← 목록으로</a>"
-
-    return f"""
-    <h2>{row[0]}님의 사주 풀이</h2>
-    <p><b>생일:</b> {row[1]}</p>
-    <p><b>시간:</b> {row[2]}</p>
-    <p><b>일시:</b> {row[4]}</p>
-    <hr>
-    <pre>{row[3]}</pre>
-    <br><a href='/logs'><button>← 목록으로</button></a>
-    """
+@app.route('/reports/<report_id>')
+def view_report(report_id):
+    """취약점 보고서 상세 보기 페이지"""
+    try:
+        report_items = get_report(report_id)
+        
+        if not report_items:
+            return """
+            <div style="text-align: center; padding: 50px;">
+                <h2>❌ 보고서를 찾을 수 없습니다</h2>
+                <a href="/" style="color: #3498db;">← 메인으로 돌아가기</a>
+            </div>
+            """
+        
+        vulnerabilities = report_items.get('vulnerabilities', [])
+        
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="ko">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>취약점 분석 보고서 - {report_id}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
+                .container {{ max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                h1 {{ color: #2c3e50; text-align: center; margin-bottom: 30px; }}
+                .vulnerability-card {{ border: 1px solid #ddd; margin: 16px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                .vulnerability-card h3 {{ color: #e74c3c; margin-top: 0; }}
+                .vulnerability-card ul {{ margin: 10px 0; padding-left: 20px; }}
+                .vulnerability-card li {{ margin: 5px 0; }}
+                .back-link {{ text-align: center; margin-top: 30px; }}
+                .back-link a {{ color: #3498db; text-decoration: none; font-weight: bold; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🔍 취약점 분석 보고서</h1>
+                <p style="text-align: center; color: #7f8c8d;">보고서 ID: {report_id}</p>
+        """
+        
+        if not vulnerabilities:
+            html += '<div style="text-align: center; padding: 50px; color: #7f8c8d;">취약점이 발견되지 않았습니다.</div>'
+        else:
+            for item in vulnerabilities:
+                html += f"""
+                <div class="vulnerability-card">
+                    <h3>🚨 {item.get('type', 'Unknown')} ({item.get('vuln_id', 'N/A')})</h3>
+                    <div><strong>위험성:</strong> {item.get('risk', 'N/A')}</div>
+                    <div>
+                        <strong>📋 유사 사고 사례:</strong>
+                        <ul>
+                """
+                
+                incidents = item.get('incidents', [])
+                for inc in incidents:
+                    html += f"""
+                            <li>
+                                <strong>{inc.get('title', 'N/A')}</strong> ({inc.get('date', 'N/A')}): {inc.get('summary', 'N/A')}
+                            </li>
+                    """
+                
+                html += """
+                        </ul>
+                    </div>
+                    <div>
+                        <strong>🛡️ 대응 방안:</strong>
+                        <ul>
+                """
+                
+                management = item.get('management', {})
+                for key, value in management.items():
+                    html += f'<li><strong>{key}</strong>: {value}</li>'
+                
+                html += f"""
+                        </ul>
+                    </div>
+                    <div><strong>🎓 메타인지 교육:</strong> {item.get('metacognition', 'N/A')}</div>
+                </div>
+                """
+        
+        html += """
+                <div class="back-link">
+                    <a href="/">← 메인으로 돌아가기</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html
+        
+    except Exception as e:
+        return f"""
+        <div style="text-align: center; padding: 50px;">
+            <h2>❌ 오류가 발생했습니다</h2>
+            <p style="color: red;">{str(e)}</p>
+            <a href="/" style="color: #3498db;">← 메인으로 돌아가기</a>
+        </div>
+        """
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

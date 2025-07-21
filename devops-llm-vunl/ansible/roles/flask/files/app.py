@@ -1,6 +1,10 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, jsonify
 import os, requests, json, pymysql
 from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
+import uuid
+from datetime import datetime
+from vulnService import create_report, get_report, list_reports, delete_report
 
 # 환경변수 로딩
 load_dotenv()
@@ -14,6 +18,19 @@ API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyB-lFb9w-Uy-sJtw31xlVx8ohnQpzNje4g")
 GEN_URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={API_KEY}"
 
 app = Flask(__name__)
+
+# 파일 업로드 설정
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 
 HTML_FORM = """
 <h2>Gemini 사주풀이</h2>
@@ -46,6 +63,78 @@ def save_to_db(name, birth, hour, result):
         )
         conn.commit()
     conn.close()
+
+@app.route('/api/vuln/analyze', methods=['POST'])
+def vuln_analyze():
+    """취약점 분석 API 엔드포인트"""
+    try:
+        # 파일 체크
+        if 'file' not in request.files:
+            return jsonify({"error": "파일이 없습니다"}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({"error": "파일이 선택되지 않았습니다"}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({"error": "지원하지 않는 파일 형식입니다"}), 400
+        
+        # 새로운 VulnService를 사용하여 보고서 생성
+        import asyncio
+        report_id = asyncio.run(create_report(file))
+        
+        return jsonify({"reportId": report_id}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/vuln/report/<report_id>', methods=['GET'])
+def get_vuln_report(report_id):
+    """취약점 보고서 조회 API 엔드포인트"""
+    try:
+        # 경로 파라미터에서 report_id 추출
+        report_id = request.view_args['report_id']
+        
+        # VulnService를 사용하여 보고서 조회
+        report_items = get_report(report_id)
+        
+        if not report_items:
+            return jsonify({"error": "Report not found"}), 404
+        
+        # 취약점 항목들만 배열로 반환
+        vulnerabilities = report_items.get('vulnerabilities', [])
+        
+        return jsonify(vulnerabilities), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/vuln/reports', methods=['GET'])
+def list_vuln_reports():
+    """취약점 보고서 목록 조회 API 엔드포인트"""
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        reports = list_reports(limit)
+        
+        return jsonify({"reports": reports}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/vuln/report/<report_id>', methods=['DELETE'])
+def delete_vuln_report(report_id):
+    """취약점 보고서 삭제 API 엔드포인트"""
+    try:
+        success = delete_report(report_id)
+        
+        if not success:
+            return jsonify({"error": "보고서 삭제에 실패했습니다"}), 500
+        
+        return jsonify({"message": "보고서가 성공적으로 삭제되었습니다"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/', methods=['GET', 'POST'])
 def home():

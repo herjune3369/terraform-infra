@@ -1,221 +1,252 @@
-# DevOps Infrastructure Automation
+# DevOps LLM VUNL - Vision-LLM 기반 웹 취약점 분석 시스템
 
-이 프로젝트는 Ansible과 Terraform을 사용하여 클라우드 인프라를 자동화하고 Flask 애플리케이션을 배포하는 DevOps 도구입니다.
+## 🎯 프로젝트 개요
 
-## 🚀 기능
+이 프로젝트는 Vision-capable LLM을 활용하여 웹 취약점 진단 결과 이미지를 분석하고, 보호동기 이론(PMT) 기반의 구조화된 보고서를 생성하는 시스템입니다.
 
-- Terraform을 통한 AWS 인프라 자동화
-- Ansible을 통한 애플리케이션 배포 자동화
-- Flask 웹 애플리케이션 배포
-- 멀티 환경 지원 (개발/스테이징/프로덕션)
-- 데이터베이스 초기화 및 설정
-- GitHub Actions를 통한 CI/CD 자동화
+### 주요 기능
+- **이미지 업로드**: 웹 취약점 진단 결과 이미지 업로드
+- **Vision-LLM 분석**: Gemini Vision API를 통한 이미지 분석
+- **PMT 기반 보고서**: 보호동기 이론에 따른 구조화된 분석 결과
+- **데이터베이스 저장**: 분석 결과를 MySQL에 저장
+- **API 기반 조회**: RESTful API를 통한 보고서 조회
 
-## 📋 사전 요구사항
+## 🏗️ 아키텍처
 
-- Python 3.7+
-- Ansible 2.9+
-- Terraform 1.0+
-- AWS CLI
-- AWS 계정 및 자격 증명
-
-## 🛠️ 설치 및 실행
-
-### 1. 의존성 설치
-
-```bash
-# Ansible 설치
-pip install ansible
-
-# AWS CLI 설치 (macOS)
-brew install awscli
-
-# AWS CLI 설치 (Linux)
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-sudo ./aws/install
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   React Frontend│    │  Flask Backend  │    │  Gemini Vision  │
+│                 │    │                 │    │      API        │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │
+│ │VulnUploader │ │    │ │/api/vuln/   │ │    │ │Image Analysis│ │
+│ │             │ │    │ │analyze      │ │    │ │             │ │
+│ │Image Upload │ │───▶│ │             │ │───▶│ │PMT-based    │ │
+│ │             │ │    │ │FormData     │ │    │ │Report       │ │
+│ └─────────────┘ │    │ └─────────────┘ │    │ └─────────────┘ │
+│                 │    │                 │    │                 │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │    │                 │
+│ │ReportViewer │ │◀───│ │/api/vuln/   │ │    │                 │
+│ │             │ │    │ │report/:id   │ │    │                 │
+│ │Card Display │ │    │ │             │ │    │                 │
+│ │             │ │    │ │JSON Array   │ │    │                 │
+│ └─────────────┘ │    │ └─────────────┘ │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │   MySQL RDS     │
+                       │                 │
+                       │ vuln_reports    │
+                       │ table           │
+                       │                 │
+                       └─────────────────┘
 ```
 
-### 2. AWS 자격 증명 설정
+## 📋 API 스펙
 
+### POST /api/vuln/analyze
+- **Content-Type**: `multipart/form-data`
+- **파일 필드**: `file` (이미지 파일)
+- **응답**: `{"reportId": "<id>"}`
+
+**요청 예시:**
 ```bash
-# AWS 자격 증명 설정
-aws configure
-
-# 또는 환경 변수 설정
-export AWS_ACCESS_KEY_ID="your-access-key"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-export AWS_DEFAULT_REGION="us-west-2"
+curl -X POST http://localhost:5000/api/vuln/analyze \
+  -F "file=@vulnerability_scan.png"
 ```
 
-### 3. GitHub Secrets 설정
+**응답 예시:**
+```json
+{
+  "reportId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
 
-GitHub 저장소의 Settings > Secrets and variables > Actions에서 다음 시크릿을 설정하세요:
+### GET /api/vuln/report/:id
+- **경로 파라미터**: `id` (reportId)
+- **응답**: JSON 배열(취약점별 보고서)
 
-- `AWS_ACCESS_KEY_ID`: AWS 액세스 키
-- `AWS_SECRET_ACCESS_KEY`: AWS 시크릿 키
+**요청 예시:**
+```bash
+curl http://localhost:5000/api/vuln/report/550e8400-e29b-41d4-a716-446655440000
+```
 
-## 🚀 자동화된 배포
+**응답 예시:**
+```json
+[
+  {
+    "vuln_id": "VULN-001",
+    "type": "SQL Injection",
+    "incidents": [
+      {
+        "title": "A사 개인정보 유출 사고",
+        "date": "2023-01-15",
+        "summary": "SQL Injection 취약점을 악용하여 고객 개인정보 유출"
+      }
+    ],
+    "risk": "공격자가 데이터베이스에 직접 접근하여 데이터 수정/삭제/탈취 가능",
+    "management": {
+      "urgent": "임시 방편으로 취약한 페이지 접근 차단",
+      "short_term": "입력값 검증 강화 및 Prepared Statements 사용",
+      "long_term": "정기적인 취약점 점검 및 보안 교육 실시"
+    },
+    "metacognition": "개발자 보안 인식 제고를 위한 교육 필요"
+  }
+]
+```
 
-### GitHub Actions를 통한 자동 배포
+### GET /api/vuln/reports
+- **쿼리 파라미터**: `limit` (기본값: 10)
+- **응답**: 보고서 목록
 
-이 프로젝트는 GitHub Actions를 통해 자동화된 CI/CD 파이프라인을 제공합니다:
+### DELETE /api/vuln/report/:id
+- **경로 파라미터**: `id` (reportId)
+- **응답**: `{"message": "보고서가 성공적으로 삭제되었습니다"}`
 
-1. **코드 푸시 시 자동 실행**: `main` 또는 `develop` 브랜치에 푸시하면 자동으로 실행됩니다
-2. **수동 실행**: GitHub Actions 탭에서 수동으로 워크플로우를 실행할 수 있습니다
-3. **환경 선택**: 개발, 스테이징, 프로덕션 환경 중 선택하여 배포할 수 있습니다
+## 🔧 환경변수
 
-### 워크플로우 단계
+- `GEMINI_API_KEY`: Vision-LLM 호출용 API 키
+- `RDS_HOST`: MySQL RDS 호스트
+- `RDS_USER`: 데이터베이스 사용자명 (기본값: admin)
+- `RDS_PASSWORD`: 데이터베이스 비밀번호
+- `RDS_DATABASE`: 데이터베이스명 (기본값: saju)
 
-1. **Validate**: Terraform 코드 검증 및 포맷 확인
-2. **Security Scan**: Trivy를 통한 보안 취약점 스캔
-3. **Deploy Infrastructure**: Terraform을 통한 AWS 인프라 배포
-4. **Deploy Application**: Ansible을 통한 애플리케이션 배포
-5. **Notify**: 배포 결과 알림
+## 🎯 사용 플로우
+
+1. **웹에서 이미지 업로드**
+   - 사용자가 취약점 진단 결과 이미지 선택
+   - VulnUploader 컴포넌트에서 파일 처리
+
+2. **`/api/vuln/analyze` 호출 → `reportId` 수신**
+   - Flask 백엔드에서 이미지 분석 요청
+   - Gemini Vision API를 통한 PMT 기반 분석
+   - 분석 결과를 MySQL에 저장
+   - 고유 reportId 반환
+
+3. **`/reports/:id` 접속 → 카드 뷰어**
+   - ReportViewer 컴포넌트에서 분석 결과 표시
+   - 취약점별 카드 형태로 구조화된 정보 제공
+   - 유사 사고 사례, 위험성, 대응 방안, 메타인지 교육 정보 포함
+
+## 🗄️ 데이터베이스 스키마
+
+```sql
+CREATE TABLE vuln_reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    report_id VARCHAR(36) NOT NULL,
+    vuln_id VARCHAR(50) NOT NULL,
+    type VARCHAR(100) NOT NULL,
+    incidents JSON,
+    risk TEXT,
+    management JSON,
+    metacognition TEXT,
+    image_filename VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_report_id (report_id),
+    INDEX idx_vuln_id (vuln_id),
+    INDEX idx_created_at (created_at),
+    INDEX idx_type (type)
+);
+```
+
+## 🚀 배포 방법
+
+1. **Terraform으로 인프라 배포**
+   ```bash
+   cd terraform
+   terraform init -reconfigure
+   terraform plan
+   terraform apply
+   ```
+
+2. **Ansible으로 애플리케이션 배포**
+   ```bash
+   cd ansible
+   ansible-playbook -i inventories/aws_ec2.yml playbook.yml
+   ```
+
+3. **환경변수 설정**
+   - RDS 연결 정보
+   - Gemini API 키
 
 ## 📁 프로젝트 구조
 
 ```
-devops/
-├── README.md                   # 프로젝트 문서
-├── ansible/                   # Ansible 플레이북
-│   ├── playbook.yml          # 메인 플레이북
-│   ├── inventories/          # 인벤토리 파일
-│   │   ├── aws_ec2.yml
-│   │   └── group_vars/
-│   │       └── all.yml
-│   └── roles/                # Ansible 역할
-│       └── flask/
-│           ├── files/        # 애플리케이션 파일
-│           │   ├── app.py
-│           │   ├── requirements.txt
-│           │   └── init_db.sql
-│           ├── tasks/        # 작업 정의
-│           │   └── main.yml
-│           └── templates/    # 템플릿 파일
-└── terraform/                # Terraform 설정
-    ├── main.tf              # 메인 설정
-    ├── variables.tf         # 변수 정의
-    ├── outputs.tf          # 출력 정의
-    ├── backend.tf          # 백엔드 설정
-    ├── terraform.tfvars    # 변수 값
-    └── save_outputs.sh     # 출력 저장 스크립트
+devops-llm-vunl/
+├── ansible/
+│   ├── roles/flask/files/
+│   │   ├── app.py              # Flask 애플리케이션
+│   │   ├── vulnService.py      # 취약점 분석 서비스
+│   │   ├── llm_client.py       # LLM 클라이언트
+│   │   └── init_db.sql         # 데이터베이스 스키마
+│   └── playbook.yml
+├── terraform/                   # AWS 인프라 코드
+├── src/                        # React 프론트엔드
+│   ├── components/
+│   │   ├── VulnUploader.jsx    # 이미지 업로드 컴포넌트
+│   │   └── ReportViewer.jsx    # 보고서 뷰어 컴포넌트
+│   └── App.js                  # 라우팅 설정
+├── test_*.py                   # 테스트 스크립트들
+├── PROMPT.md                   # LLM 프롬프트 템플릿
+└── README.md
 ```
 
-## 🔧 수동 실행 (로컬)
+## 🔍 PMT 기반 분석 프롬프트
 
-### Terraform 초기화
+Vision-LLM이 분석하는 PMT(보호동기 이론) 관점:
 
+1. **유사 해킹 사고 사례** (2건)
+2. **위험성**: 예상 피해 시나리오
+3. **경영진 권고**: 즉시/단기/중장기 대응 방안
+4. **메타인지 교육**: 필요성 및 주제
+
+## 📝 개발 가이드
+
+### 로컬 개발 환경
 ```bash
-cd terraform
-terraform init
+# 가상환경 생성
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 의존성 설치
+pip install -r requirements.txt
+
+# 환경변수 설정
+export GEMINI_API_KEY=your-key
+export RDS_HOST=localhost
+
+# 앱 실행
+python app.py
 ```
 
-### 인프라 배포
-
+### 테스트
 ```bash
-# Terraform 계획 확인
-terraform plan
-
-# 인프라 생성
-terraform apply
-
-# 출력값 저장
-./save_outputs.sh
+# API 테스트
+curl -X POST -F "file=@vuln_image.jpg" http://localhost:5000/api/vuln/analyze
+curl http://localhost:5000/api/vuln/report/1
 ```
 
-### 애플리케이션 배포
+## 🔒 보안 고려사항
 
-```bash
-cd ../ansible
+1. **파일 업로드 검증**: 허용된 이미지 형식만 업로드
+2. **파일명 보안**: UUID를 사용한 고유 파일명 생성
+3. **API 키 보안**: 환경변수로 관리
+4. **DB 연결 보안**: SSL 연결 사용
 
-# 인벤토리 파일 확인
-cat inventories/aws_ec2.yml
+## 📈 모니터링
 
-# Ansible 플레이북 실행
-ansible-playbook -i inventories/aws_ec2.yml playbook.yml
-```
+- **로그**: Flask 앱 로그
+- **메트릭**: API 응답 시간, 오류율
+- **알림**: Slack/Email 알림 설정 가능
 
-## 🌐 배포된 애플리케이션
+## 🤝 기여 가이드
 
-배포가 완료되면 다음 URL에서 Flask 애플리케이션에 접근할 수 있습니다:
-
-- **개발 환경**: `http://dev-your-domain.com`
-- **스테이징 환경**: `http://staging-your-domain.com`
-- **프로덕션 환경**: `http://your-domain.com`
-
-## 📊 모니터링
-
-### GitHub Actions에서 확인
-
-1. GitHub 저장소의 Actions 탭에서 워크플로우 실행 상태를 확인할 수 있습니다
-2. 각 단계별 상세 로그를 확인할 수 있습니다
-3. 보안 스캔 결과는 Security 탭에서 확인할 수 있습니다
-
-### 로그 확인
-
-```bash
-# EC2 인스턴스에 SSH 접속
-ssh -i ~/.ssh/your-key.pem ubuntu@your-instance-ip
-
-# 애플리케이션 로그 확인
-sudo journalctl -u flask-app -f
-
-# 시스템 로그 확인
-sudo tail -f /var/log/syslog
-```
-
-### 상태 확인
-
-```bash
-# 서비스 상태 확인
-sudo systemctl status flask-app
-
-# 포트 확인
-sudo netstat -tlnp | grep :5000
-```
-
-## 🔒 보안
-
-- SSH 키 기반 인증
-- 보안 그룹을 통한 네트워크 접근 제어
-- IAM 역할을 통한 최소 권한 원칙 적용
-- HTTPS 강제 적용 (프로덕션)
-- Trivy를 통한 정기적인 보안 스캔
-
-## 🧹 정리
-
-### 인프라 삭제
-
-```bash
-cd terraform
-terraform destroy
-```
-
-### 로컬 파일 정리
-
-```bash
-# Terraform 상태 파일 삭제
-rm -rf .terraform
-rm -f .terraform.lock.hcl
-
-# Ansible 캐시 삭제
-rm -rf ~/.ansible
-```
-
-## 🤝 기여하기
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Fork the repository
+2. Create feature branch
+3. Commit changes
+4. Push to branch
+5. Create Pull Request
 
 ## 📄 라이선스
 
-이 프로젝트는 MIT 라이선스 하에 배포됩니다.
-
-## 📞 지원
-
-문제가 발생하거나 질문이 있으시면 이슈를 생성해 주세요. # test
-# Trigger workflow
+MIT License

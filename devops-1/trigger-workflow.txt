@@ -4,4 +4,5 @@
 
 생성 시간: $(date)
 목적: GitHub Actions 워크플로우 트리거
-상태: AWS 콘솔에서 기존 리소스 삭제 완료 후 재실행 
+상태: AWS 콘솔에서 기존 리소스 삭제 완료 후 재실행
+참고: Target Group (app-tg) 삭제 필요 

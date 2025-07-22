@@ -46,32 +46,52 @@ class LLMClient:
                 filename = getattr(image_file, 'filename', 'unknown.jpg')
             
             # 프롬프트 템플릿
-            prompt = """
-            아래 웹 취약점 진단 이미지를 분석하여,
+            prompt = f"""
+            **중요**: 제공된 이미지를 자세히 분석하여 실제 발견된 취약점들을 식별해주세요.
+            
+            이미지에서 발견되는 웹 취약점들을 분석하여,
             **JSON 배열** 형태로 각 취약점별로 반환해 주세요.
 
-            1. id (문자열): 취약점 고유번호 (예: VULN-001)
-            2. type (문자열): 취약점 유형 (예: SQL Injection, XSS, CSRF 등)
-            3. severity (문자열): 심각도 (높음/중간/낮음)
-            4. module (문자열): 발견된 모듈/URL 경로 (예: /login, /api/users 등)
-            5. summary (문자열): 취약점 요약 설명 (한 줄)
-            6. incidents (배열):
-               * 유사 해킹 사고 사례 2건
-               * 각 사례는 name, date, summary 필드 포함
-               * summary는 사례 개요, 발생 경위, 피해 규모 포함하여 **최소 5줄 이상** 상세히 설명
-            7. risk (문자열):
-               * 취약점 공격 시 예상되는 피해 시나리오
-               * **최소 5줄 이상** 세밀하게 묘사
-            8. management (객체):
-               * urgent (문자열): 즉시 대응 방안
-               * short_term (문자열): 단기(1~3개월) 대응 방안
-               * long_term (문자열): 중장기(3개월 이상) 대응 방안
-               * 각각 **최소 5줄 이상** 작성
-            9. metacognition (문자열):
-               * 전직원 대상 메타인지 교육 필요성 및 내용
-               * 목표, 커리큘럼, 기대 효과 등을 **최소 10줄 이상** 자세히 설명
+            **분석 요구사항**:
+            - 이미지에 표시된 실제 취약점들을 정확히 식별
+            - 각 취약점의 구체적인 위치와 특성 분석
+            - 발견된 취약점이 없다면 빈 배열 [] 반환
 
-            실제 사례를 바탕으로 구체적이고 실용적인 정보를 제공해주세요.
+            **응답 형식**:
+            [
+              {{
+                "id": "VULN-001",
+                "type": "SQL Injection",
+                "severity": "높음",
+                "module": "/login",
+                "summary": "로그인 폼에서 SQL Injection 취약점 발견",
+                "incidents": [
+                  {{
+                    "name": "Equifax 데이터 유출 사고",
+                    "date": "2017-05-13",
+                    "summary": "Apache Struts 취약점을 이용한 대규모 데이터 유출. 1억 4,700만 명의 개인정보가 유출되었으며, 사회보장번호, 신용카드 정보, 운전면허증 번호 등 민감한 정보가 포함되었습니다. 공격자는 SQL Injection을 통해 데이터베이스에 직접 접근하여 모든 고객 정보를 탈취했습니다. 이 사고로 인해 회사는 약 7억 달러의 피해를 입었으며, CEO와 CSO가 사임하는 등 경영진 교체가 이루어졌습니다."
+                  }},
+                  {{
+                    "name": "Heartland Payment Systems 해킹",
+                    "date": "2008-03-19",
+                    "summary": "SQL Injection을 통한 신용카드 정보 유출 사고. 공격자는 웹 애플리케이션의 취약점을 이용하여 데이터베이스에 접근하여 1억 3,400만 개의 신용카드 정보를 탈취했습니다. 이 사고는 미국 역사상 가장 큰 신용카드 정보 유출 사고 중 하나로 기록되었으며, 회사는 1억 4,100만 달러의 벌금을 부과받았습니다. 또한 고객 신뢰도 하락으로 인한 매출 감소와 브랜드 가치 하락을 경험했습니다."
+                  }}
+                ],
+                "risk": "SQL Injection 취약점이 악용될 경우, 공격자는 데이터베이스에 직접 접근하여 모든 고객 정보를 탈취할 수 있습니다. 특히 개인정보, 금융정보, 비즈니스 데이터 등 민감한 정보가 노출될 위험이 매우 높습니다. 공격자는 데이터베이스 구조를 파악하고, 백업 데이터까지 접근하여 완전한 데이터 유출을 시도할 수 있습니다. 또한 데이터베이스 관리자 권한을 획득하여 시스템 전체를 장악할 가능성도 있습니다. 이는 단순한 데이터 유출을 넘어서 전체 비즈니스 운영의 중단으로 이어질 수 있는 심각한 위험입니다.",
+                "management": {{
+                  "urgent": "즉시 취약한 웹 애플리케이션의 패치를 적용하고, 모든 데이터베이스 접근을 차단해야 합니다. 또한 침입 탐지 시스템을 활성화하여 이상 징후를 모니터링하고, 영향을 받은 사용자들에게 즉시 통보해야 합니다.",
+                  "short_term": "1-3개월 내에 웹 애플리케이션 방화벽(WAF)을 도입하고, 모든 입력값 검증 로직을 강화해야 합니다. 또한 정기적인 보안 취약점 점검을 실시하고, 개발자 대상 보안 코딩 교육을 진행해야 합니다.",
+                  "long_term": "3개월 이상의 중장기 계획으로는 보안 개발 생명주기(SDLC) 도입, 자동화된 보안 테스트 도구 구축, 보안 인시던트 대응 체계 수립 등이 필요합니다. 또한 보안 문화 조성을 위한 전사적 보안 교육 프로그램을 운영해야 합니다."
+                }},
+                "metacognition": "전직원 대상 메타인지 교육은 보안 의식 향상과 위험 인식 능력 개발을 목표로 합니다. 교육 커리큘럼은 보안 위험 인식, 개인정보 보호 중요성, 사회공학적 공격 기법 이해, 안전한 웹 사용법 등을 포함합니다. 특히 개발팀은 안전한 코딩 방법론, 입력값 검증, SQL Injection 방지 기법 등을 심화 학습해야 합니다. 운영팀은 로그 모니터링, 이상 징후 감지, 사고 대응 절차 등을 교육받아야 합니다. 일반 직원들은 피싱 메일 식별, 안전한 비밀번호 관리, 개인정보 보호 수칙 등을 학습합니다. 이 교육을 통해 조직 전체의 보안 문화를 조성하고, 각 직원이 보안의 첫 번째 방어선 역할을 할 수 있도록 합니다."
+              }}
+            ]
+
+            **주의사항**:
+            - 이미지에서 실제로 발견된 취약점만 분석
+            - 발견된 취약점이 없다면 빈 배열 [] 반환
+            - 각 필드는 이미지 분석 결과를 바탕으로 작성
+            - 일반적인 취약점 정보가 아닌 이미지 특정 분석 결과 제공
             """
             
             # API 요청 본문 구성
@@ -91,7 +111,7 @@ class LLMClient:
                     }
                 ],
                 "generationConfig": {
-                    "temperature": 0.3,
+                    "temperature": 0.7,
                     "topK": 40,
                     "topP": 0.95,
                     "maxOutputTokens": 4096
@@ -99,6 +119,10 @@ class LLMClient:
             }
             
             # API 호출
+            print(f"DEBUG: API 호출 시작 - 파일명: {filename}")
+            print(f"DEBUG: 이미지 크기: {len(image_data)} bytes")
+            print(f"DEBUG: 인코딩된 이미지 길이: {len(encoded_image)}")
+            
             headers = {"Content-Type": "application/json"}
             response = requests.post(
                 self.api_url, 
@@ -111,11 +135,17 @@ class LLMClient:
             response.raise_for_status()
             response_data = response.json()
             
+            print(f"DEBUG: API 응답 상태 코드: {response.status_code}")
+            print(f"DEBUG: API 응답 키들: {list(response_data.keys())}")
+            
             # LLM 응답 추출
             if "candidates" not in response_data or not response_data["candidates"]:
+                print(f"DEBUG: 응답 데이터: {response_data}")
                 raise Exception("LLM 응답에서 candidates를 찾을 수 없습니다.")
             
             llm_response = response_data["candidates"][0]["content"]["parts"][0]["text"]
+            print(f"DEBUG: LLM 원본 응답 길이: {len(llm_response)}")
+            print(f"DEBUG: LLM 응답 시작 부분: {llm_response[:300]}...")
             
             # JSON 파싱
             parsed_result = self._parse_llm_response(llm_response)

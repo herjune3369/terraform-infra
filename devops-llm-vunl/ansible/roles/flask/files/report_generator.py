@@ -99,40 +99,114 @@ def generate_final_report(
     report += ", ".join(medium_types) if medium_types else "없음"
     report += " → 단기 보강\n\n"
     
-    report += "**APT 공격 시나리오**\n"
+    report += "**🔴 APT 공격 시나리오 (Advanced Persistent Threat)**\n\n"
     
     # 실제 진단된 취약점을 기반으로 APT 시나리오 생성
     vuln_types = [v.get('type', '') for v in vuln_list if v.get('type')]
     
     if vuln_types:
-        report += f"공격자는 진단된 취약점들을 종합적으로 활용하여 체계적인 공격을 수행할 수 있습니다. "
+        report += "**📋 공격 단계별 상세 시나리오**\n\n"
         
-        # 인증 관련 취약점이 있는 경우
-        auth_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['인증', '로그인', '세션', '권한'])]
+        # 1단계: 정찰 및 정보 수집
+        report += "**1단계: 정찰 및 정보 수집 (Reconnaissance & Intelligence Gathering)**\n"
+        info_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['정보', '누출', '노출', '디버그', '에러'])]
+        if info_vulns:
+            report += f"공격자는 {', '.join(info_vulns)} 취약점을 통해 서버 구조, 데이터베이스 스키마, API 엔드포인트, 내부 네트워크 토폴로지 등 핵심 정보를 수집합니다. "
+            report += "에러 메시지와 디버그 정보를 통해 기술 스택, 버전 정보, 내부 경로 등을 파악하여 공격 벡터를 선정합니다.\n\n"
+        else:
+            report += "공격자는 소셜 엔지니어링과 OSINT(Open Source Intelligence)를 통해 조직의 기술 스택, 직원 정보, 비즈니스 프로세스를 수집합니다.\n\n"
+        
+        # 2단계: 초기 침투
+        report += "**2단계: 초기 침투 (Initial Access)**\n"
+        auth_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['인증', '로그인', '세션', '권한', 'sql', '인젝션'])]
         if auth_vulns:
-            report += f"먼저 {', '.join(auth_vulns)} 취약점을 이용해 관리자 권한을 획득합니다. "
+            report += f"수집된 정보를 바탕으로 {', '.join(auth_vulns)} 취약점을 악용하여 관리자 계정에 무단 접근합니다. "
+            report += "SQL 인젝션을 통한 인증 우회, 세션 하이재킹, 권한 상승 등을 통해 내부 시스템에 첫 발을 내딛습니다.\n\n"
+        else:
+            report += "피싱 이메일이나 워터링 홀 공격을 통해 악성코드를 유포하고, 사용자의 클릭을 유도하여 초기 침투를 시도합니다.\n\n"
         
-        # 파일 업로드 관련 취약점이 있는 경우
-        upload_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['업로드', '파일', '업로드'])]
+        # 3단계: 권한 확장
+        report += "**3단계: 권한 확장 (Privilege Escalation)**\n"
+        upload_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['업로드', '파일', '업로드', '경로', '순회'])]
         if upload_vulns:
-            report += f"이후 {', '.join(upload_vulns)} 취약점을 통해 웹 셸을 서버에 업로드하여 원격 코드 실행 권한을 확보합니다. "
+            report += f"획득한 권한을 활용해 {', '.join(upload_vulns)} 취약점을 통해 웹 셸(WebShell)을 서버에 업로드합니다. "
+            report += "파일 업로드 검증 우회, 경로 순회 취약점을 악용하여 원격 코드 실행(RCE) 권한을 확보하고, 내부 네트워크로의 이동 통로를 구축합니다.\n\n"
+        else:
+            report += "로컬 권한 상승 취약점을 악용하여 일반 사용자 권한에서 관리자 권한으로 확장하고, 도메인 컨트롤러 접근을 시도합니다.\n\n"
         
-        # XSS 관련 취약점이 있는 경우
+        # 4단계: 내부 정찰 및 이동
+        report += "**4단계: 내부 정찰 및 이동 (Internal Reconnaissance & Lateral Movement)**\n"
         xss_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['xss', '스크립트', '크로스사이트'])]
         if xss_vulns:
-            report += f"이 권한을 활용해 {', '.join(xss_vulns)} 취약점을 연계하여 세션 쿠키와 내부 로그를 탈취·분석합니다. "
+            report += f"내부 네트워크에서 {', '.join(xss_vulns)} 취약점을 활용하여 관리자 세션을 탈취하고, 내부 시스템 간 자유로운 이동을 수행합니다. "
+            report += "XSS를 통한 세션 쿠키 탈취, 내부 로그 분석, 데이터베이스 접근 권한 획득을 통해 핵심 자산에 접근합니다.\n\n"
+        else:
+            report += "Pass-the-Hash, Golden Ticket 공격 등을 통해 도메인 내 다른 시스템으로 이동하며, 핵심 서버와 데이터베이스의 위치를 파악합니다.\n\n"
         
-        # 정보 누출 관련 취약점이 있는 경우
-        info_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['정보', '누출', '노출', '디버그'])]
-        if info_vulns:
-            report += f"네트워크에 진입한 공격자는 {', '.join(info_vulns)} 취약점을 남용해 서비스 설정을 완전히 변경하고 백업 데이터를 삭제·암호화합니다. "
+        # 5단계: 데이터 수집 및 유출
+        report += "**5단계: 데이터 수집 및 유출 (Data Collection & Exfiltration)**\n"
+        report += "핵심 데이터베이스에 접근하여 고객 정보, 금융 데이터, 지적재산권, 비즈니스 기밀 등을 대량으로 수집합니다. "
+        report += "데이터를 암호화하여 C&C(Command & Control) 서버로 유출하고, 증거 인멸을 위한 로그 삭제 작업을 수행합니다.\n\n"
         
-        # 기타 취약점들
+        # 6단계: 지속성 확보 및 피해 확산
+        report += "**6단계: 지속성 확보 및 피해 확산 (Persistence & Impact)**\n"
         other_vulns = [v for v in vuln_types if v not in auth_vulns + upload_vulns + xss_vulns + info_vulns]
         if other_vulns:
-            report += f"마지막으로 {', '.join(other_vulns)} 취약점을 통해 랜섬웨어를 배포하거나 대량의 고객 데이터를 유출하여 서비스 마비와 평판 손상을 동시에 일으킵니다.\n\n"
+            report += f"마지막으로 {', '.join(other_vulns)} 취약점을 악용하여 백도어를 설치하고, 랜섬웨어를 배포하여 시스템을 완전히 마비시킵니다. "
         else:
-            report += "이러한 취약점들을 통해 랜섬웨어를 배포하거나 대량의 고객 데이터를 유출하여 서비스 마비와 평판 손상을 동시에 일으킵니다.\n\n"
+            report += "백도어와 루트킷을 설치하여 지속적인 접근을 확보하고, 랜섬웨어를 배포하여 시스템을 완전히 마비시킵니다. "
+        report += "이를 통해 조직의 운영 중단, 평판 손상, 법적 책임, 고객 신뢰도 하락 등 다차원적 피해를 야기합니다.\n\n"
+        
+        # 실제 해킹 사례 추가 - 이미지에서 읽어온 데이터 사용
+        report += "**📰 실제 유사 해킹 사례**\n\n"
+        
+        # 이미지에서 읽어온 incidents 데이터 활용
+        all_incidents = []
+        for vuln in vuln_list:
+            incidents = vuln.get('incidents', [])
+            if incidents:
+                all_incidents.extend(incidents)
+        
+        if all_incidents:
+            # 중복 제거 및 정렬
+            unique_incidents = []
+            seen_names = set()
+            for incident in all_incidents:
+                name = incident.get('name', '')
+                if name and name not in seen_names:
+                    unique_incidents.append(incident)
+                    seen_names.add(name)
+            
+            # 최대 3개까지만 표시
+            for i, incident in enumerate(unique_incidents[:3], 1):
+                name = incident.get('name', f'사고 사례 {i}')
+                date = incident.get('date', '날짜 미상')
+                summary = incident.get('summary', '사고 요약 정보가 없습니다.')
+                
+                report += f"**🔸 {name} ({date})**\n"
+                report += f"{summary}\n\n"
+        else:
+            report += "이미지에서 읽어온 구체적인 해킹 사례 정보가 없습니다. 추가 진단을 통해 관련 사례를 제공하겠습니다.\n\n"
+        
+        # 예상 피해 규모
+        total_vulns = len(vuln_list)
+        if total_vulns > 0:
+            report += "**💰 예상 피해 규모**\n\n"
+            if total_vulns >= 5:
+                report += "**심각도: 매우 높음** - 다중 취약점 연계 공격으로 인한 전면적 시스템 마비 및 대규모 데이터 유출 위험\n"
+                report += "* 예상 피해액: 1,000만 달러 이상\n"
+                report += "* 복구 기간: 6개월 이상\n"
+                report += "* 평판 손실: 회복 불가능한 수준\n\n"
+            elif total_vulns >= 3:
+                report += "**심각도: 높음** - 핵심 시스템 침투 및 중간 규모 데이터 유출 위험\n"
+                report += "* 예상 피해액: 500만 달러\n"
+                report += "* 복구 기간: 3-6개월\n"
+                report += "* 평판 손실: 장기간 회복 필요\n\n"
+            else:
+                report += "**심각도: 중간** - 제한적 시스템 접근 및 소규모 데이터 유출 위험\n"
+                report += "* 예상 피해액: 100만 달러\n"
+                report += "* 복구 기간: 1-3개월\n"
+                report += "* 평판 손실: 단기간 회복 가능\n\n"
     else:
         report += "진단된 취약점 정보가 부족하여 구체적인 공격 시나리오를 제시하기 어렵습니다. 추가 진단을 통해 취약점을 정확히 파악한 후 상세한 공격 시나리오를 제공하겠습니다.\n\n"
     

@@ -319,13 +319,20 @@ def view_report(report_id):
             elif line.startswith('---'):
                 processed_lines.append('<hr>')
             elif line.startswith('![') and '](' in line and line.endswith(')'):
-                # 이미지 태그 처리
+                # 이미지 태그 처리 - 업로드된 취약점 진단 이미지를 실제로 표시
                 import re
                 img_match = re.match(r'!\[([^\]]*)\]\(([^)]+)\)', line)
                 if img_match:
                     alt_text = img_match.group(1)
                     img_src = img_match.group(2)
-                    processed_lines.append(f'<img src="{img_src}" alt="{alt_text}" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;">')
+                    # 이미지를 실제로 표시하는 HTML 태그 생성
+                    processed_lines.append(f'''
+                    <div style="text-align: center; margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+                        <h4 style="color: #2c3e50; margin-bottom: 15px;">📸 취약점 진단 이미지</h4>
+                        <img src="{img_src}" alt="{alt_text}" style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <p style="margin-top: 10px; color: #7f8c8d; font-style: italic;">이미지에서 발견된 취약점들을 AI가 분석하여 본 보고서를 생성했습니다.</p>
+                    </div>
+                    ''')
                 else:
                     processed_lines.append(f'<p>{line}</p>')
             elif line.startswith('|') and '|' in line[1:]:

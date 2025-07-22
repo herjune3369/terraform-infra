@@ -36,24 +36,27 @@ def generate_final_report(
 * **작성일**: {today}
 * **작성자/팀**: {author}
 * **대상 시스템**: {target_system}
+* **진단 이미지**: {image_filename}
 * **보고 목적**: 진단된 취약점을 통해 조직원의 보안정책 준수 의지를 강화하고, 보호동기 이론(PMT) 기반 실행 전략을 제시
+
+### 📸 취약점 진단 이미지
+
+![취약점 진단 결과]({image_filename})
+
+*이미지에서 발견된 취약점들을 AI가 분석하여 본 보고서를 생성했습니다.*
 
 ---
 
 ## 2. 취약점 요약 Table (OWASP Top 10 기준)
 
-| 취약점 ID | OWASP 카테고리 | 취약점 유형 | 심각도 | 발견 위치 | CVE/CWE | 요약 |
-| -------- | ------------ | -------- | --- | ------- | ------- | --- |
+| OWASP 카테고리 | 취약점 유형 | CVE/CWE |
+| ------------ | -------- | ------- |
 """
     
     # 2. 취약점 요약 테이블 - OWASP 기준으로 재구성
     for i, vuln in enumerate(vuln_list, 1):
         # 이미지에서 읽어온 실제 데이터 사용
-        vuln_id = vuln.get('id', f'VULN-{i:03d}')
         vuln_type = vuln.get('type', '알 수 없는 취약점')
-        severity = vuln.get('severity', '중간')
-        module = vuln.get('module', '알 수 없는 모듈')
-        summary = vuln.get('summary', '취약점 요약 정보가 없습니다.')
         
         # OWASP Top 10 카테고리 매핑
         vuln_type_lower = vuln_type.lower()
@@ -88,7 +91,7 @@ def generate_final_report(
             owasp_category = "기타 취약점"
             cve_cwe = "N/A"
         
-        report += f"| {vuln_id} | {owasp_category} | {vuln_type} | {severity} | {module} | {cve_cwe} | {summary} |\n"
+        report += f"| {owasp_category} | {vuln_type} | {cve_cwe} |\n"
     
     report += "\n---\n\n## 3. 취약점별 위험성 및 유사 해킹 사고 사례\n\n"
     report += "각 취약점에 대해 \"위험성(5줄 이상)\"과 \"유사 해킹 사고 사례(1건, 5줄 이상)\"를 한 묶음으로 정리했습니다.\n\n"
@@ -303,8 +306,19 @@ def generate_final_report(
         
         report += "\n---\n\n"
         
-        # 3. 실제 유사 해킹 사례
-        report += "### 3️⃣ 실제 유사 해킹 사례\n\n"
+        # 3. 발견된 취약점들이 복합적으로 사용된 실제 해킹 사례
+        report += "### 3️⃣ 발견된 취약점들이 복합적으로 사용된 실제 해킹 사례\n\n"
+        
+        # 발견된 취약점 유형들을 수집
+        found_vuln_types = []
+        for vuln in vuln_list:
+            vuln_type = vuln.get('type', '')
+            if vuln_type and vuln_type not in found_vuln_types:
+                found_vuln_types.append(vuln_type)
+        
+        if found_vuln_types:
+            report += f"**🔍 발견된 취약점 유형**: {', '.join(found_vuln_types)}\n\n"
+            report += "**💡 복합적 공격 시나리오**: 위의 취약점들이 연계되어 사용될 경우 다음과 같은 실제 해킹 사례와 유사한 공격이 가능합니다.\n\n"
         
         # 이미지에서 읽어온 incidents 데이터 활용
         all_incidents = []
@@ -325,7 +339,7 @@ def generate_final_report(
             
             # 최대 3개까지만 표시
             for i, incident in enumerate(unique_incidents[:3], 1):
-                name = incident.get('name', f'사고 사례 {i}')
+                name = incident.get('name', f'복합 공격 사례 {i}')
                 date = incident.get('date', '날짜 미상')
                 summary = incident.get('summary', '사고 요약 정보가 없습니다.')
                 source = incident.get('source', '출처: 보안진단팀 분석')
@@ -334,7 +348,7 @@ def generate_final_report(
                 report += f"{summary}\n"
                 report += f"*{source}*\n\n"
         else:
-            report += "이미지에서 읽어온 구체적인 해킹 사례 정보가 없습니다. 추가 진단을 통해 관련 사례를 제공하겠습니다.\n\n"
+            report += "이미지에서 읽어온 구체적인 복합 공격 사례 정보가 없습니다. 추가 진단을 통해 관련 사례를 제공하겠습니다.\n\n"
         
         report += "\n---\n\n"
         

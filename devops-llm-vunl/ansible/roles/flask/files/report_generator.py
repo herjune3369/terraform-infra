@@ -84,49 +84,23 @@ def generate_final_report(
     
     report += "## 4. 경영진 보고사항 (Management Brief)\n\n"
     
-    # 4. 경영진 보고사항
-    high_severity = [v for v in vuln_list if v.get('severity') == '높음']
-    medium_severity = [v for v in vuln_list if v.get('severity') == '중간']
-    
-    report += "**취약점 심각도 요약**\n\n"
-    report += "* '높음': "
-    high_types = [v.get('type') for v in high_severity]
-    report += ", ".join(high_types) if high_types else "없음"
-    report += " → 즉시 패치\n"
-    
-    report += "* '중간': "
-    medium_types = [v.get('type') for v in medium_severity]
-    report += ", ".join(medium_types) if medium_types else "없음"
-    report += " → 단기 보강\n\n"
-    
-    report += "**🔴 APT 공격 시나리오 (Advanced Persistent Threat)**\n\n"
-    
-    # 실제 진단된 취약점을 기반으로 APT 시나리오 생성
+    # 취약점 데이터 분석
+    total_vulns = len(vuln_list)
+    high_severity_count = len([v for v in vuln_list if v.get('severity') == '높음'])
+    medium_severity_count = len([v for v in vuln_list if v.get('severity') == '중간'])
     vuln_types = [v.get('type', '') for v in vuln_list if v.get('type')]
     
+    # 취약점 유형별 분석
+    auth_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['인증', '로그인', '세션', '권한', 'sql', '인젝션'])]
+    upload_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['업로드', '파일', '경로', '순회'])]
+    xss_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['xss', '스크립트', '크로스사이트'])]
+    info_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['정보', '누출', '노출', '디버그', '에러'])]
+    
     if vuln_types:
-        # 웹 취약점 진단 결과 심각성 평가 및 경영진 주의 환기
-        report += "**⚠️ 경영진 주의 환기: 웹 취약점 연계 APT 공격 위험성 평가**\n\n"
+        # 1. 전체 위험성 평가
+        report += "### 1️⃣ 전체 위험성 평가\n\n"
         
-        # 취약점 수와 심각도 기반 위험성 평가
-        total_vulns = len(vuln_list)
-        high_severity_count = len([v for v in vuln_list if v.get('severity') == '높음'])
-        medium_severity_count = len([v for v in vuln_list if v.get('severity') == '중간'])
-        
-        # 취약점 유형별 위험도 분석
-        auth_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['인증', '로그인', '세션', '권한', 'sql', '인젝션'])]
-        upload_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['업로드', '파일', '경로', '순회'])]
-        xss_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['xss', '스크립트', '크로스사이트'])]
-        info_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['정보', '누출', '노출', '디버그', '에러'])]
-        
-        # 이미지에서 읽어온 위험성 평가 데이터 활용
-        risk_assessments = []
-        for vuln in vuln_list:
-            risk = vuln.get('risk', '')
-            if risk and risk != '위험성 정보가 없습니다.':
-                risk_assessments.append(risk)
-        
-        # 위험성 등급 결정 - 이미지 데이터 기반
+        # 위험성 등급 결정
         if high_severity_count >= 3 or (len(upload_vulns) > 0 and len(auth_vulns) > 0):
             risk_level = "🔴 **극도로 위험 (Critical Risk)**"
         elif high_severity_count >= 1 or len(upload_vulns) > 0:
@@ -137,12 +111,18 @@ def generate_final_report(
             risk_level = "🟢 **낮은 위험 (Low Risk)**"
         
         # 이미지에서 읽어온 위험성 설명 사용
+        risk_assessments = []
+        for vuln in vuln_list:
+            risk = vuln.get('risk', '')
+            if risk and risk != '위험성 정보가 없습니다.':
+                risk_assessments.append(risk)
+        
         if risk_assessments:
-            risk_description = risk_assessments[0]  # 첫 번째 위험성 설명 사용
+            risk_description = risk_assessments[0]
         else:
             risk_description = f"총 {total_vulns}개의 취약점이 발견되어 보안 대응이 필요합니다."
         
-        # 비즈니스 영향도 - 취약점 수와 유형 기반 동적 생성
+        # 비즈니스 영향도
         if total_vulns >= 5:
             business_impact = "조직의 핵심 비즈니스에 심각한 위협이 될 수 있습니다."
         elif total_vulns >= 3:
@@ -163,20 +143,8 @@ def generate_final_report(
         report += f"**위험성 평가**: {risk_description}\n\n"
         report += f"**비즈니스 영향도**: {business_impact}\n\n"
         
-        # 경영진 주의 환기 메시지
-        report += "**🚨 경영진 특별 주의사항**\n\n"
-        report += "> 💡 **현재 발견된 웹 취약점들은 단독으로도 위험하지만, APT(Advanced Persistent Threat) 공격자들이 이들을 연계하여 사용할 경우 조직 전체를 마비시킬 수 있는 치명적인 위협이 됩니다.**\n\n"
-        
-        if len(upload_vulns) > 0:
-            report += f"* **파일 업로드 취약점({len(upload_vulns)}개)**: 공격자가 웹 셸을 업로드하여 서버를 완전히 장악할 수 있습니다.\n"
-        if len(auth_vulns) > 0:
-            report += f"* **인증 취약점({len(auth_vulns)}개)**: 관리자 권한을 획득하여 모든 시스템에 접근할 수 있습니다.\n"
-        if len(xss_vulns) > 0:
-            report += f"* **XSS 취약점({len(xss_vulns)}개)**: 사용자 세션을 탈취하여 내부 데이터에 무단 접근할 수 있습니다.\n"
-        if len(info_vulns) > 0:
-            report += f"* **정보 누출 취약점({len(info_vulns)}개)**: 내부 시스템 구조와 데이터베이스 정보를 노출시킵니다.\n"
-        
-        report += "\n**📊 APT 공격 연계 위험도**: "
+        # APT 공격 연계 위험도
+        report += "**📊 APT 공격 연계 위험도**: "
         if len(upload_vulns) > 0 and len(auth_vulns) > 0:
             report += "**극도로 높음** - 파일 업로드와 인증 취약점이 동시에 존재하여 완전한 시스템 장악 가능\n"
         elif len(upload_vulns) > 0 or len(auth_vulns) > 0:
@@ -186,17 +154,12 @@ def generate_final_report(
         else:
             report += "**중간** - 제한적이지만 연계 공격 가능성 존재\n"
         
-        report += "\n**⏰ 권장 대응 시한**: "
-        if high_severity_count >= 3 or (len(upload_vulns) > 0 and len(auth_vulns) > 0):
-            report += "**즉시 (24시간 이내)**\n"
-        elif high_severity_count >= 1 or len(upload_vulns) > 0:
-            report += "**긴급 (72시간 이내)**\n"
-        elif total_vulns >= 3:
-            report += "**신속 (1주일 이내)**\n"
-        else:
-            report += "**일반 (2주일 이내)**\n"
-        
         report += "\n---\n\n"
+        
+        # 2. APT 공격 단계별 시나리오
+        report += "### 2️⃣ APT 공격 단계별 시나리오\n\n"
+        report += "> 💡 **현재 발견된 웹 취약점들은 단독으로도 위험하지만, APT(Advanced Persistent Threat) 공격자들이 이들을 연계하여 사용할 경우 조직 전체를 마비시킬 수 있는 치명적인 위협이 됩니다.**\n\n"
+        
         report += "**📋 공격 단계별 상세 시나리오**\n\n"
         
         # 1단계: 정찰 및 정보 수집
@@ -249,8 +212,10 @@ def generate_final_report(
             report += "백도어와 루트킷을 설치하여 지속적인 접근을 확보하고, 랜섬웨어를 배포하여 시스템을 완전히 마비시킵니다. "
         report += "이를 통해 조직의 운영 중단, 평판 손상, 법적 책임, 고객 신뢰도 하락 등 다차원적 피해를 야기합니다.\n\n"
         
-        # 실제 해킹 사례 추가 - 이미지에서 읽어온 데이터 사용
-        report += "**📰 실제 유사 해킹 사례**\n\n"
+        report += "\n---\n\n"
+        
+        # 3. 실제 유사 해킹 사례
+        report += "### 3️⃣ 실제 유사 해킹 사례\n\n"
         
         # 이미지에서 읽어온 incidents 데이터 활용
         all_incidents = []
@@ -281,7 +246,6 @@ def generate_final_report(
             report += "이미지에서 읽어온 구체적인 해킹 사례 정보가 없습니다. 추가 진단을 통해 관련 사례를 제공하겠습니다.\n\n"
         
         # 예상 피해 규모
-        total_vulns = len(vuln_list)
         if total_vulns > 0:
             report += "**💰 예상 피해 규모**\n\n"
             if total_vulns >= 5:
@@ -299,47 +263,63 @@ def generate_final_report(
                 report += "* 예상 피해액: 100만 달러\n"
                 report += "* 복구 기간: 1-3개월\n"
                 report += "* 평판 손실: 단기간 회복 가능\n\n"
+        
+        report += "\n---\n\n"
+        
+        # 4. 대응 전략
+        report += "### 4️⃣ 대응 전략\n\n"
+        
+        # 권장 대응 시한
+        report += "**⏰ 권장 대응 시한**: "
+        if high_severity_count >= 3 or (len(upload_vulns) > 0 and len(auth_vulns) > 0):
+            report += "**즉시 (24시간 이내)**\n"
+        elif high_severity_count >= 1 or len(upload_vulns) > 0:
+            report += "**긴급 (72시간 이내)**\n"
+        elif total_vulns >= 3:
+            report += "**신속 (1주일 이내)**\n"
+        else:
+            report += "**일반 (2주일 이내)**\n"
+        
+        report += "\n**즉시 대응 (0–7일)**\n\n"
+        
+        # 실제 취약점에 따른 즉시 대응 방안
+        if auth_vulns:
+            report += f"* {', '.join(auth_vulns)} 관련 엔드포인트 외부 접근 차단\n"
+        if upload_vulns:
+            report += f"* {', '.join(upload_vulns)} 기능 임시 비활성화 및 파일 업로드 제한\n"
+        if xss_vulns:
+            report += f"* {', '.join(xss_vulns)} 방지를 위한 WAF 규칙 즉시 적용\n"
+        if info_vulns:
+            report += f"* {', '.join(info_vulns)} 관련 디버그 모드 및 로그 노출 차단\n"
+        
+        report += "* 24시간 내 긴급 패치 완료 및 모의 해킹 재검증\n\n"
+        
+        report += "**단기 강화 (1–3주)**\n\n"
+        
+        # 취약점 유형에 따른 단기 강화 방안
+        if auth_vulns:
+            report += "* 인증·권한 관리 시스템 전면 점검 및 강화\n"
+        if upload_vulns:
+            report += "* 파일 업로드 검증 로직 재설계 및 화이트리스트 적용\n"
+        if xss_vulns:
+            report += "* 입력값 검증 및 출력 인코딩 표준화\n"
+        if info_vulns:
+            report += "* 정보 노출 방지를 위한 에러 처리 및 로깅 정책 수립\n"
+        
+        report += "* 전 직원 대상 보안 인식 교육 및 모의 해킹 워크숍\n\n"
+        
+        report += "**중장기 체계화 (1–3개월+)**\n\n"
+        
+        # 취약점 심각도에 따른 중장기 계획
+        if high_severity_count > 0:
+            report += "* 고위험 취약점 재발 방지를 위한 보안 개발 생명주기(SDLC) 도입\n"
+        if medium_severity_count > 0:
+            report += "* 중간 위험 취약점 모니터링을 위한 보안 KPI 설정\n"
+        
+        report += "* 분기별 CISO 검토 회의 제도화 및 SOC·SIEM 고도화\n"
+        report += "* 외부 보안 인증(ISMS-P 등) 준비 및 보안 성숙도 평가\n\n"
     else:
         report += "진단된 취약점 정보가 부족하여 구체적인 공격 시나리오를 제시하기 어렵습니다. 추가 진단을 통해 취약점을 정확히 파악한 후 상세한 공격 시나리오를 제공하겠습니다.\n\n"
-    
-    report += "**즉시 대응 (0–7일)**\n\n"
-    
-    # 실제 취약점에 따른 즉시 대응 방안
-    if auth_vulns:
-        report += f"* {', '.join(auth_vulns)} 관련 엔드포인트 외부 접근 차단\n"
-    if upload_vulns:
-        report += f"* {', '.join(upload_vulns)} 기능 임시 비활성화 및 파일 업로드 제한\n"
-    if xss_vulns:
-        report += f"* {', '.join(xss_vulns)} 방지를 위한 WAF 규칙 즉시 적용\n"
-    if info_vulns:
-        report += f"* {', '.join(info_vulns)} 관련 디버그 모드 및 로그 노출 차단\n"
-    
-    report += "* 24시간 내 긴급 패치 완료 및 모의 해킹 재검증\n\n"
-    
-    report += "**단기 강화 (1–3주)**\n\n"
-    
-    # 취약점 유형에 따른 단기 강화 방안
-    if auth_vulns:
-        report += "* 인증·권한 관리 시스템 전면 점검 및 강화\n"
-    if upload_vulns:
-        report += "* 파일 업로드 검증 로직 재설계 및 화이트리스트 적용\n"
-    if xss_vulns:
-        report += "* 입력값 검증 및 출력 인코딩 표준화\n"
-    if info_vulns:
-        report += "* 정보 노출 방지를 위한 에러 처리 및 로깅 정책 수립\n"
-    
-    report += "* 전 직원 대상 보안 인식 교육 및 모의 해킹 워크숍\n\n"
-    
-    report += "**중장기 체계화 (1–3개월+)**\n\n"
-    
-    # 취약점 심각도에 따른 중장기 계획
-    if high_severity:
-        report += "* 고위험 취약점 재발 방지를 위한 보안 개발 생명주기(SDLC) 도입\n"
-    if medium_severity:
-        report += "* 중간 위험 취약점 모니터링을 위한 보안 KPI 설정\n"
-    
-    report += "* 분기별 CISO 검토 회의 제도화 및 SOC·SIEM 고도화\n"
-    report += "* 외부 보안 인증(ISMS-P 등) 준비 및 보안 성숙도 평가\n\n"
     
     report += "---\n\n## 5. 메타인지 교육 제안 (Metacognition Training)\n\n"
     report += "> **목표**: 전직원 대상 메타인지 역량 강화로 자발적 위험 탐지·보고 문화 조성\n\n"

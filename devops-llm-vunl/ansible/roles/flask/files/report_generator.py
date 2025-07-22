@@ -202,18 +202,73 @@ def generate_final_report(
     
     report += "---\n\n## 6. 종합 대응 로드맵 (Comprehensive Response Roadmap)\n\n"
     
-    # 6. 종합 대응 로드맵
-    report += """| 단계         | 기간     | 주요 활동                                                                     | 담당 조직/팀     |
-| ---------- | ------ | ------------------------------------------------------------------------- | ----------- |
-| **긴급 대응**  | 0–7일   | - 취약점 패치 및 WAF 규칙 즉시 적용<br>- 위험 엔드포인트 차단<br>- 긴급 모의해킹 실시                  | 보안팀·개발팀·SOC |
-| **단기 강화**  | 1–3주   | - 코드 리뷰 및 스캔 자동화 도입<br>- 전 직원 보안 인식 교육·워크숍 실시                             | 개발팀·교육팀     |
-| **중기 체계화** | 1–3개월  | - 보안 거버넌스 강화(KPI 포함)<br>- 분기별 CISO 검토 회의 제도화<br>- SOC·SIEM 고도화            | 전략팀·거버넌스팀   |
-| **장기 개선**  | 3–6개월+ | - Red Team·Blue Team 훈련<br>- 온프레미스 LLM 검토<br>- 외부 보안 인증 준비<br>- 보안 성숙도 평가 | 보안전략팀·감사팀   |
-
----
-
-*End of Report*
-"""
+    # 6. 종합 대응 로드맵 - 실제 취약점 기반 동적 생성
+    report += "| 단계         | 기간     | 주요 활동                                                                     | 담당 조직/팀     |\n"
+    report += "| ---------- | ------ | ------------------------------------------------------------------------- | ----------- |\n"
+    
+    # 긴급 대응 단계
+    urgent_activities = []
+    if auth_vulns:
+        urgent_activities.append(f"{', '.join(auth_vulns)} 관련 엔드포인트 차단")
+    if upload_vulns:
+        urgent_activities.append(f"{', '.join(upload_vulns)} 기능 임시 비활성화")
+    if xss_vulns:
+        urgent_activities.append(f"{', '.join(xss_vulns)} 방지 WAF 규칙 적용")
+    if info_vulns:
+        urgent_activities.append(f"{', '.join(info_vulns)} 관련 디버그 모드 차단")
+    
+    urgent_activities.append("긴급 모의해킹 실시")
+    urgent_activities_str = "<br>- ".join(urgent_activities)
+    
+    report += f"| **긴급 대응**  | 0–7일   | - {urgent_activities_str}                  | 보안팀·개발팀·SOC |\n"
+    
+    # 단기 강화 단계
+    short_activities = []
+    if auth_vulns:
+        short_activities.append("인증·권한 관리 시스템 전면 점검")
+    if upload_vulns:
+        short_activities.append("파일 업로드 검증 로직 재설계")
+    if xss_vulns:
+        short_activities.append("입력값 검증 및 출력 인코딩 표준화")
+    if info_vulns:
+        short_activities.append("에러 처리 및 로깅 정책 수립")
+    
+    short_activities.append("전 직원 보안 인식 교육·워크숍 실시")
+    short_activities_str = "<br>- ".join(short_activities)
+    
+    report += f"| **단기 강화**  | 1–3주   | - {short_activities_str}                             | 개발팀·교육팀     |\n"
+    
+    # 중기 체계화 단계
+    medium_activities = []
+    if high_severity:
+        medium_activities.append("고위험 취약점 재발 방지를 위한 SDLC 도입")
+    if medium_severity:
+        medium_activities.append("중간 위험 취약점 모니터링을 위한 KPI 설정")
+    
+    medium_activities.extend([
+        "분기별 CISO 검토 회의 제도화",
+        "SOC·SIEM 고도화"
+    ])
+    medium_activities_str = "<br>- ".join(medium_activities)
+    
+    report += f"| **중기 체계화** | 1–3개월  | - {medium_activities_str}            | 전략팀·거버넌스팀   |\n"
+    
+    # 장기 개선 단계
+    long_activities = []
+    if total_vulns > 5:
+        long_activities.append("Red Team·Blue Team 훈련")
+    if any('llm' in v.lower() or 'ai' in v.lower() for v in vuln_types):
+        long_activities.append("온프레미스 LLM 보안 검토")
+    
+    long_activities.extend([
+        "외부 보안 인증 준비",
+        "보안 성숙도 평가"
+    ])
+    long_activities_str = "<br>- ".join(long_activities)
+    
+    report += f"| **장기 개선**  | 3–6개월+ | - {long_activities_str} | 보안전략팀·감사팀   |\n\n"
+    
+    report += "---\n\n*End of Report*"
     
     return report
 

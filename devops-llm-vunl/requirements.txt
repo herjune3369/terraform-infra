@@ -1,0 +1,23 @@
+# Core dependencies
+openai>=1.3.0
+pillow>=10.0.0
+pytesseract>=0.3.10
+opencv-python>=4.8.1.78
+numpy>=1.24.3
+
+# Web framework and database
+flask>=2.3.3
+pymysql>=1.1.0
+werkzeug>=2.3.7
+
+# HTTP requests and utilities
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Security and cryptography
+cryptography>=41.0.7
+
+# Development and testing (optional)
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0 

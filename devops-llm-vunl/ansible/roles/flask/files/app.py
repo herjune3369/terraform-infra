@@ -318,6 +318,16 @@ def view_report(report_id):
                 processed_lines.append(f'<h3>{line[4:]}</h3>')
             elif line.startswith('---'):
                 processed_lines.append('<hr>')
+            elif line.startswith('![') and '](' in line and line.endswith(')'):
+                # 이미지 태그 처리
+                import re
+                img_match = re.match(r'!\[([^\]]*)\]\(([^)]+)\)', line)
+                if img_match:
+                    alt_text = img_match.group(1)
+                    img_src = img_match.group(2)
+                    processed_lines.append(f'<img src="{img_src}" alt="{alt_text}" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;">')
+                else:
+                    processed_lines.append(f'<p>{line}</p>')
             elif line.startswith('|') and '|' in line[1:]:
                 # 테이블 행 처리
                 if not in_table:

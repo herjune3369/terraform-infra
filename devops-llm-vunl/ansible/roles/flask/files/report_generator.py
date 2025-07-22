@@ -91,7 +91,41 @@ def generate_final_report(
     report += " → 단기 보강\n\n"
     
     report += "**APT 공격 시나리오**\n"
-    report += "공격자는 먼저 인증 우회 취약점을 이용해 관리자 권한을 획득합니다. 이후 파일 업로드 검증 미흡 취약점을 통해 웹 셸을 서버에 업로드하여 원격 코드 실행 권한을 확보합니다. 이 권한을 활용해 크로스사이트 스크립팅과 정보 누출 취약점을 연계, 세션 쿠키와 내부 로그를 탈취·분석하여 네트워크 내부로 수평 이동합니다. 네트워크에 진입한 공격자는 관리자 페이지 노출 취약점을 남용해 서비스 설정을 완전히 변경하고 백업 데이터를 삭제·암호화합니다. 마지막으로 악성 콘텐츠 삽입 취약점을 통해 랜섬웨어를 배포하거나 대량의 고객 데이터를 유출하여 서비스 마비와 평판 손상을 동시에 일으킵니다.\n\n"
+    
+    # 실제 진단된 취약점을 기반으로 APT 시나리오 생성
+    vuln_types = [v.get('type', '') for v in vuln_list if v.get('type')]
+    
+    if vuln_types:
+        report += f"공격자는 진단된 취약점들을 종합적으로 활용하여 체계적인 공격을 수행할 수 있습니다. "
+        
+        # 인증 관련 취약점이 있는 경우
+        auth_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['인증', '로그인', '세션', '권한'])]
+        if auth_vulns:
+            report += f"먼저 {', '.join(auth_vulns)} 취약점을 이용해 관리자 권한을 획득합니다. "
+        
+        # 파일 업로드 관련 취약점이 있는 경우
+        upload_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['업로드', '파일', '업로드'])]
+        if upload_vulns:
+            report += f"이후 {', '.join(upload_vulns)} 취약점을 통해 웹 셸을 서버에 업로드하여 원격 코드 실행 권한을 확보합니다. "
+        
+        # XSS 관련 취약점이 있는 경우
+        xss_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['xss', '스크립트', '크로스사이트'])]
+        if xss_vulns:
+            report += f"이 권한을 활용해 {', '.join(xss_vulns)} 취약점을 연계하여 세션 쿠키와 내부 로그를 탈취·분석합니다. "
+        
+        # 정보 누출 관련 취약점이 있는 경우
+        info_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['정보', '누출', '노출', '디버그'])]
+        if info_vulns:
+            report += f"네트워크에 진입한 공격자는 {', '.join(info_vulns)} 취약점을 남용해 서비스 설정을 완전히 변경하고 백업 데이터를 삭제·암호화합니다. "
+        
+        # 기타 취약점들
+        other_vulns = [v for v in vuln_types if v not in auth_vulns + upload_vulns + xss_vulns + info_vulns]
+        if other_vulns:
+            report += f"마지막으로 {', '.join(other_vulns)} 취약점을 통해 랜섬웨어를 배포하거나 대량의 고객 데이터를 유출하여 서비스 마비와 평판 손상을 동시에 일으킵니다.\n\n"
+        else:
+            report += "이러한 취약점들을 통해 랜섬웨어를 배포하거나 대량의 고객 데이터를 유출하여 서비스 마비와 평판 손상을 동시에 일으킵니다.\n\n"
+    else:
+        report += "진단된 취약점 정보가 부족하여 구체적인 공격 시나리오를 제시하기 어렵습니다. 추가 진단을 통해 취약점을 정확히 파악한 후 상세한 공격 시나리오를 제공하겠습니다.\n\n"
     
     report += "**즉시 대응 (0–7일)**\n\n"
     report += "* 모든 취약점 엔드포인트 및 관리자 URL 외부 접근 차단\n"

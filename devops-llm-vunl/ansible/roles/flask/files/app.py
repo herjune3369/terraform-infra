@@ -532,4 +532,32 @@ def view_report(report_id):
         """
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    try:
+        print("🚀 Flask 애플리케이션 시작 중...")
+        print(f"📊 데이터베이스 연결 정보:")
+        print(f"   - 호스트: {os.getenv('RDS_HOST', 'N/A')}")
+        print(f"   - 데이터베이스: {os.getenv('RDS_DATABASE', 'N/A')}")
+        print(f"   - 사용자: {os.getenv('RDS_USER', 'N/A')}")
+        print(f"🔑 API 키 상태: {'설정됨' if os.getenv('GEMINI_API_KEY') and os.getenv('GEMINI_API_KEY') != 'your-gemini-api-key-here' else '설정되지 않음'}")
+        
+        # 데이터베이스 연결 테스트
+        try:
+            import pymysql
+            connection = pymysql.connect(
+                host=os.getenv('RDS_HOST'),
+                user=os.getenv('RDS_USER'),
+                password=os.getenv('RDS_PASSWORD'),
+                database=os.getenv('RDS_DATABASE'),
+                port=3306
+            )
+            connection.close()
+            print("✅ 데이터베이스 연결 성공")
+        except Exception as db_error:
+            print(f"❌ 데이터베이스 연결 실패: {db_error}")
+        
+        print("🌐 Flask 서버 시작...")
+        app.run(host='0.0.0.0', port=5000, debug=False)
+    except Exception as e:
+        print(f"❌ Flask 애플리케이션 시작 실패: {e}")
+        import traceback
+        traceback.print_exc()

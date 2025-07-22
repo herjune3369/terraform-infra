@@ -474,62 +474,6 @@ def view_report(report_id):
             <a href="/" style="color: #3498db;">← 메인으로 돌아가기</a>
         </div>
         """
-                        table_html += '<tr>'
-                        for cell in cells:
-                            table_html += f'<td style="border: 1px solid #ddd; padding: 12px; text-align: left;">{cell}</td>'
-                        table_html += '</tr>'
-                elif in_table and '|' not in line:
-                    in_table = False
-                    table_html += '</table>'
-                    lines[i-1] = table_html
-                    table_html = ''
-            
-            report_html = '\n'.join(lines)
-            
-            # 리스트 처리
-            report_html = report_html.replace('* **', '<li style="margin: 8px 0;"><strong>')
-            report_html = report_html.replace('* ', '<li style="margin: 8px 0;">')
-            report_html = report_html.replace('\n\n', '</li>')
-            
-            # 구분선 처리
-            report_html = report_html.replace('---', '<hr style="border: none; border-top: 2px solid #3498db; margin: 30px 0;">')
-            
-            # JSON 코드 블록 처리
-            report_html = report_html.replace('```json', '<pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd;"><code>')
-            report_html = report_html.replace('```', '</code></pre>')
-            
-            # 일반 텍스트 처리
-            report_html = report_html.replace('\n\n', '</p><p style="margin: 15px 0; line-height: 1.6;">')
-            report_html = report_html.replace('\n', '<br>')
-            
-            # 리스트 래핑
-            report_html = report_html.replace('<li style="margin: 8px 0;">', '<ul style="margin: 15px 0; padding-left: 20px;"><li style="margin: 8px 0;">')
-            report_html = report_html.replace('</li>', '</li></ul>')
-            
-            # 최종 정리
-            report_html = f'<div style="text-align: left; line-height: 1.6;">{report_html}</div>'
-            
-            html += report_html
-        
-        html += """
-                <div class="back-link">
-                    <a href="/">← 메인으로 돌아가기</a>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        return html
-        
-    except Exception as e:
-        return f"""
-        <div style="text-align: center; padding: 50px;">
-            <h2>❌ 오류가 발생했습니다</h2>
-            <p style="color: red;">{str(e)}</p>
-            <a href="/" style="color: #3498db;">← 메인으로 돌아가기</a>
-        </div>
-        """
 
 if __name__ == '__main__':
     try:

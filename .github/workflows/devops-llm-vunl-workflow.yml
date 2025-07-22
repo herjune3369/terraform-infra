@@ -344,6 +344,7 @@ jobs:
         
         ansible-playbook -i inventories/aws_ec2.yml playbook.yml \
           -e "env=${{ github.event.inputs.environment || 'dev' }}" \
+          -e "gemini_api_key=${{ secrets.GEMINI_API_KEY }}" \
           --private-key ~/.ssh/id_rsa \
           -v
       env:

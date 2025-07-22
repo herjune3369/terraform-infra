@@ -70,7 +70,7 @@
       RDS_USER=admin
       RDS_PASSWORD={{ db_password }}
       RDS_DATABASE=flask_app
-      GEMINI_API_KEY=your-gemini-api-key-here
+      GEMINI_API_KEY={{ gemini_api_key | default('your-gemini-api-key-here') }}
       UPLOAD_FOLDER=uploads
       MAX_CONTENT_LENGTH=16777216
       SECRET_KEY=your-secret-key-here

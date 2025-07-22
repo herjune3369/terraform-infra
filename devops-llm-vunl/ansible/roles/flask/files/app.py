@@ -289,13 +289,83 @@ def view_report(report_id):
         final_report = generate_final_report_md(report_id, target_system)
         
         # Markdown을 간단한 HTML로 변환
-        html_content = final_report.replace('\n', '<br>')
-        html_content = html_content.replace('# ', '<h1>').replace('\n', '</h1>')
-        html_content = html_content.replace('## ', '<h2>').replace('\n', '</h2>')
-        html_content = html_content.replace('### ', '<h3>').replace('\n', '</h3>')
-        html_content = html_content.replace('**', '<strong>').replace('**', '</strong>')
-        html_content = html_content.replace('|', '</td><td>')
-        html_content = html_content.replace('---', '<hr>')
+        html_content = final_report
+        
+        # 제목 처리 (정확한 패턴 매칭)
+        import re
+        
+        # 제목 처리 (줄 단위로 처리)
+        lines = html_content.split('\n')
+        processed_lines = []
+        in_table = False
+        table_rows = []
+        
+        for i, line in enumerate(lines):
+            if line.startswith('# '):
+                processed_lines.append(f'<h1>{line[2:]}</h1>')
+            elif line.startswith('## '):
+                processed_lines.append(f'<h2>{line[3:]}</h2>')
+            elif line.startswith('### '):
+                processed_lines.append(f'<h3>{line[4:]}</h3>')
+            elif line.startswith('---'):
+                processed_lines.append('<hr>')
+            elif line.startswith('|') and '|' in line[1:]:
+                # 테이블 행 처리
+                if not in_table:
+                    in_table = True
+                    table_rows = []
+                
+                cells = [cell.strip() for cell in line.split('|')[1:-1]]
+                if all(cell.startswith('-') for cell in cells):
+                    # 구분선 행은 건너뛰기
+                    continue
+                else:
+                    # 테이블 행 추가
+                    table_rows.append(cells)
+            else:
+                # 테이블 종료 처리
+                if in_table and table_rows:
+                    # 테이블 HTML 생성
+                    table_html = '<table>'
+                    for j, row in enumerate(table_rows):
+                        if j == 0:  # 첫 번째 행은 헤더
+                            th_tags = ''.join([f'<th>{cell}</th>' for cell in row])
+                            table_html += f'<tr>{th_tags}</tr>'
+                        else:  # 나머지는 데이터
+                            td_tags = ''.join([f'<td>{cell}</td>' for cell in row])
+                            table_html += f'<tr>{td_tags}</tr>'
+                    table_html += '</table>'
+                    processed_lines.append(table_html)
+                    in_table = False
+                    table_rows = []
+                
+                # 일반 텍스트
+                if line.strip():
+                    # 리스트 항목인지 확인
+                    if line.strip().startswith('- ') or line.strip().startswith('* '):
+                        processed_lines.append(f'<li>{line.strip()[2:]}</li>')
+                    else:
+                        processed_lines.append(f'<p>{line}</p>')
+                else:
+                    processed_lines.append('<br>')
+        
+        # 마지막 테이블 처리
+        if in_table and table_rows:
+            table_html = '<table>'
+            for j, row in enumerate(table_rows):
+                if j == 0:  # 첫 번째 행은 헤더
+                    th_tags = ''.join([f'<th>{cell}</th>' for cell in row])
+                    table_html += f'<tr>{th_tags}</tr>'
+                else:  # 나머지는 데이터
+                    td_tags = ''.join([f'<td>{cell}</td>' for cell in row])
+                    table_html += f'<tr>{td_tags}</tr>'
+            table_html += '</table>'
+            processed_lines.append(table_html)
+        
+        html_content = '\n'.join(processed_lines)
+        
+        # 강조 처리 (이미 처리된 태그 내부는 건드리지 않음)
+        html_content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html_content)
         
         html = f"""
         <!DOCTYPE html>
@@ -341,6 +411,16 @@ def view_report(report_id):
                     padding: 15px;
                     border-left: 5px solid #e74c3c;
                     border-radius: 0 5px 5px 0;
+                }}
+                p {{ 
+                    margin: 10px 0; 
+                    line-height: 1.6; 
+                    color: #333;
+                }}
+                li {{ 
+                    margin: 5px 0; 
+                    line-height: 1.5; 
+                    color: #333;
                 }}
                 table {{ 
                     width: 100%; 

@@ -97,7 +97,7 @@ def generate_final_report(
     report += "---\n\n## 7. 보안교육·처벌 명확성 (Education & Punishment Clarity)\n\n"
     
     # 7. 보안교육·처벌 명확성
-    report += """* **보안교육 강화**: 정기 보안 릴리즈 노트 배포, 교육 완료 시 인센티브 제공
+    report += f"""* **보안교육 강화**: 정기 보안 릴리즈 노트 배포, 교육 완료 시 인센티브 제공
 * **처벌 명확성**: 위반 시 단계별 제재(경고→교육 이수→직무 배제) 프로세스 문서화 및 HR·ITSM 연계
 
 ---
@@ -105,26 +105,20 @@ def generate_final_report(
 ## 8. 부록(Appendix)
 
 * **원본 진단 이미지 파일**: {image_filename}
-* **분석된 취약점 수**: {vuln_count}개
-* **보고서 생성 시간**: {generation_time}
+* **분석된 취약점 수**: {len(vuln_list)}개
+* **보고서 생성 시간**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 * **분석 도구**: Vision-LLM (Gemini 1.5 Flash)
 
 ### 취약점 상세 데이터 (JSON)
 
 ```json
-{json_data}
+{json.dumps(vuln_list, ensure_ascii=False, indent=2)}
 ```
 
 ---
 
-**보고서 생성 완료**: {today} {current_time}
-""".format(
-        image_filename=image_filename,
-        vuln_count=len(vuln_list),
-        generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        json_data=json.dumps(vuln_list, ensure_ascii=False, indent=2),
-        current_time=datetime.now().strftime("%H:%M:%S")
-    )
+**보고서 생성 완료**: {today} {datetime.now().strftime("%H:%M:%S")}
+"""
     
     return report
 

@@ -157,34 +157,96 @@ class LLMClient:
             List[Dict]: 파싱된 취약점 분석 결과 배열
         """
         try:
+            print(f"DEBUG: LLM 응답 길이: {len(llm_response)}")
+            print(f"DEBUG: LLM 응답 시작 부분: {llm_response[:200]}...")
+            
             # JSON 블록 추출 (```json ... ``` 형태)
+            json_str = None
+            
             if "```json" in llm_response:
                 json_start = llm_response.find("```json") + 7
                 json_end = llm_response.find("```", json_start)
-                json_str = llm_response[json_start:json_end].strip()
+                if json_end > json_start:
+                    json_str = llm_response[json_start:json_end].strip()
+                    print("DEBUG: JSON 블록에서 추출됨")
             elif "```" in llm_response:
                 # 일반 코드 블록에서 JSON 추출
                 json_start = llm_response.find("```") + 3
                 json_end = llm_response.find("```", json_start)
-                json_str = llm_response[json_start:json_end].strip()
-            else:
-                # JSON 블록이 없는 경우 전체 텍스트에서 JSON 추출
-                json_str = llm_response.strip()
+                if json_end > json_start:
+                    json_str = llm_response[json_start:json_end].strip()
+                    print("DEBUG: 일반 코드 블록에서 추출됨")
             
-            # JSON 파싱
-            parsed_data = json.loads(json_str)
+            # JSON 블록을 찾지 못한 경우, 대괄호로 시작하는 부분 찾기
+            if not json_str:
+                # [ 로 시작하는 부분 찾기
+                start_idx = llm_response.find('[')
+                if start_idx != -1:
+                    # 짝이 맞는 ] 찾기
+                    bracket_count = 0
+                    end_idx = start_idx
+                    for i, char in enumerate(llm_response[start_idx:], start_idx):
+                        if char == '[':
+                            bracket_count += 1
+                        elif char == ']':
+                            bracket_count -= 1
+                            if bracket_count == 0:
+                                end_idx = i + 1
+                                break
+                    
+                    if end_idx > start_idx:
+                        json_str = llm_response[start_idx:end_idx].strip()
+                        print("DEBUG: 대괄호 패턴에서 추출됨")
+            
+            # 여전히 찾지 못한 경우 전체 텍스트 사용
+            if not json_str:
+                json_str = llm_response.strip()
+                print("DEBUG: 전체 텍스트 사용")
+            
+            print(f"DEBUG: 추출된 JSON 문자열 길이: {len(json_str)}")
+            print(f"DEBUG: 추출된 JSON 시작 부분: {json_str[:200]}...")
+            
+            # JSON 파싱 시도
+            try:
+                parsed_data = json.loads(json_str)
+            except json.JSONDecodeError as e:
+                print(f"DEBUG: JSON 파싱 실패, 오류: {str(e)}")
+                print(f"DEBUG: 문제가 있는 JSON 문자열: {json_str}")
+                
+                # JSON 수정 시도
+                # 1. 불필요한 공백 제거
+                json_str = json_str.strip()
+                
+                # 2. 마지막 쉼표 제거
+                if json_str.endswith(','):
+                    json_str = json_str[:-1]
+                
+                # 3. 다시 파싱 시도
+                try:
+                    parsed_data = json.loads(json_str)
+                    print("DEBUG: JSON 수정 후 파싱 성공")
+                except json.JSONDecodeError as e2:
+                    print(f"DEBUG: JSON 수정 후에도 파싱 실패: {str(e2)}")
+                    raise e2
             
             # 배열이 아닌 경우 배열로 변환
             if not isinstance(parsed_data, list):
                 parsed_data = [parsed_data]
             
+            print(f"DEBUG: 파싱된 데이터 항목 수: {len(parsed_data)}")
+            
             # 각 항목 검증 및 정규화
             validated_results = []
-            for item in parsed_data:
+            for i, item in enumerate(parsed_data):
+                print(f"DEBUG: 항목 {i+1} 검증 중...")
                 validated_item = self._validate_and_normalize_item(item)
                 if validated_item:
                     validated_results.append(validated_item)
+                    print(f"DEBUG: 항목 {i+1} 검증 완료")
+                else:
+                    print(f"DEBUG: 항목 {i+1} 검증 실패")
             
+            print(f"DEBUG: 최종 검증된 항목 수: {len(validated_results)}")
             return validated_results
             
         except json.JSONDecodeError as e:
@@ -203,23 +265,47 @@ class LLMClient:
             Optional[Dict]: 검증 및 정규화된 데이터
         """
         try:
-            # 필수 필드 검증
+            print(f"DEBUG: 검증할 항목: {item}")
+            
+            # 필수 필드 검증 (더 유연하게)
+            missing_fields = []
             required_fields = ['id', 'type', 'incidents', 'risk', 'management', 'metacognition']
+            
             for field in required_fields:
-                if field not in item:
-                    print(f"경고: 필수 필드 '{field}'가 누락되었습니다.")
-                    return None
+                if field not in item or not item[field]:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                print(f"경고: 누락된 필드들: {missing_fields}")
+                # 누락된 필드에 기본값 설정
+                for field in missing_fields:
+                    if field == 'id':
+                        item[field] = f"VULN-{len(missing_fields)}"
+                    elif field == 'type':
+                        item[field] = 'Unknown'
+                    elif field == 'incidents':
+                        item[field] = []
+                    elif field == 'risk':
+                        item[field] = '위험성 정보가 없습니다.'
+                    elif field == 'management':
+                        item[field] = {}
+                    elif field == 'metacognition':
+                        item[field] = '메타인지 교육 정보가 없습니다.'
             
             # 정규화된 구조로 변환
             normalized_item = {
                 "id": str(item.get('id', 'VULN-UNKNOWN')),
                 "type": str(item.get('type', 'Unknown')),
+                "severity": str(item.get('severity', '중간')),
+                "module": str(item.get('module', '/unknown')),
+                "summary": str(item.get('summary', '취약점 요약 정보가 없습니다.')),
                 "incidents": self._normalize_incidents(item.get('incidents', [])),
-                "risk": str(item.get('risk', '')),
+                "risk": str(item.get('risk', '위험성 정보가 없습니다.')),
                 "management": self._normalize_management(item.get('management', {})),
-                "metacognition": str(item.get('metacognition', ''))
+                "metacognition": str(item.get('metacognition', '메타인지 교육 정보가 없습니다.'))
             }
             
+            print(f"DEBUG: 정규화된 항목: {normalized_item}")
             return normalized_item
             
         except Exception as e:
@@ -228,32 +314,49 @@ class LLMClient:
     
     def _normalize_incidents(self, incidents: Union[List, str]) -> List[Dict]:
         """사고 사례 데이터 정규화"""
+        print(f"DEBUG: incidents 정규화 시작: {incidents}")
+        
         if isinstance(incidents, str):
-            return [{"title": "사고 사례", "date": "N/A", "summary": incidents}]
+            print("DEBUG: incidents가 문자열입니다.")
+            return [{"name": "사고 사례", "date": "N/A", "summary": incidents}]
         
         if not isinstance(incidents, list):
+            print("DEBUG: incidents가 리스트가 아닙니다.")
             return []
         
         normalized_incidents = []
-        for incident in incidents:
+        for i, incident in enumerate(incidents):
+            print(f"DEBUG: incident {i+1} 처리 중: {incident}")
+            
             if isinstance(incident, dict):
+                # 다양한 필드명 지원
+                name = incident.get('name') or incident.get('title') or incident.get('사례명') or f"사고 사례 {i+1}"
+                date = incident.get('date') or incident.get('날짜') or 'N/A'
+                summary = incident.get('summary') or incident.get('요약') or '피해 요약 정보가 없습니다.'
+                
                 normalized_incidents.append({
-                    "title": str(incident.get('title', incident.get('사례명', 'Unknown'))),
-                    "date": str(incident.get('date', incident.get('날짜', 'N/A'))),
-                    "summary": str(incident.get('summary', incident.get('요약', '')))
+                    "name": str(name),
+                    "date": str(date),
+                    "summary": str(summary)
                 })
+                print(f"DEBUG: incident {i+1} 정규화 완료")
             elif isinstance(incident, str):
                 normalized_incidents.append({
-                    "title": "사고 사례",
+                    "name": f"사고 사례 {i+1}",
                     "date": "N/A",
                     "summary": incident
                 })
+                print(f"DEBUG: incident {i+1} 문자열 처리 완료")
         
+        print(f"DEBUG: 정규화된 incidents: {normalized_incidents}")
         return normalized_incidents
     
     def _normalize_management(self, management: Union[Dict, str]) -> Dict:
         """관리 대책 데이터 정규화"""
+        print(f"DEBUG: management 정규화 시작: {management}")
+        
         if isinstance(management, str):
+            print("DEBUG: management가 문자열입니다.")
             return {
                 "urgent": management,
                 "short_term": management,
@@ -261,17 +364,26 @@ class LLMClient:
             }
         
         if not isinstance(management, dict):
+            print("DEBUG: management가 딕셔너리가 아닙니다.")
             return {
-                "urgent": "",
-                "short_term": "",
-                "long_term": ""
+                "urgent": "긴급 대응 방안이 없습니다.",
+                "short_term": "단기 대응 방안이 없습니다.",
+                "long_term": "중장기 대응 방안이 없습니다."
             }
         
-        return {
-            "urgent": str(management.get('urgent', management.get('즉시', ''))),
-            "short_term": str(management.get('short_term', management.get('단기', ''))),
-            "long_term": str(management.get('long_term', management.get('장기', '')))
+        # 다양한 필드명 지원
+        urgent = management.get('urgent') or management.get('즉시') or management.get('긴급') or '긴급 대응 방안이 없습니다.'
+        short_term = management.get('short_term') or management.get('단기') or management.get('short') or '단기 대응 방안이 없습니다.'
+        long_term = management.get('long_term') or management.get('장기') or management.get('long') or '중장기 대응 방안이 없습니다.'
+        
+        normalized_management = {
+            "urgent": str(urgent),
+            "short_term": str(short_term),
+            "long_term": str(long_term)
         }
+        
+        print(f"DEBUG: 정규화된 management: {normalized_management}")
+        return normalized_management
     
     def test_connection(self) -> bool:
         """API 연결 테스트"""

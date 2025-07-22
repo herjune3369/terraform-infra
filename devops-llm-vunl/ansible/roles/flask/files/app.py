@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 import uuid
 from datetime import datetime
-import markdown2
 from vulnService import create_report, get_report, list_reports, delete_report, generate_final_report_md
 
 # 환경변수 로딩
@@ -289,8 +288,14 @@ def view_report(report_id):
         target_system = "웹 애플리케이션"
         final_report = generate_final_report_md(report_id, target_system)
         
-        # Markdown을 HTML로 변환
-        html_content = markdown2.markdown(final_report, extras=['tables', 'fenced-code-blocks', 'code-friendly'])
+        # Markdown을 간단한 HTML로 변환
+        html_content = final_report.replace('\n', '<br>')
+        html_content = html_content.replace('# ', '<h1>').replace('\n', '</h1>')
+        html_content = html_content.replace('## ', '<h2>').replace('\n', '</h2>')
+        html_content = html_content.replace('### ', '<h3>').replace('\n', '</h3>')
+        html_content = html_content.replace('**', '<strong>').replace('**', '</strong>')
+        html_content = html_content.replace('|', '</td><td>')
+        html_content = html_content.replace('---', '<hr>')
         
         html = f"""
         <!DOCTYPE html>

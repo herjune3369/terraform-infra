@@ -46,6 +46,8 @@
     virtualenv_command: python3 -m venv
   become: true
 
+
+
 - name: Copy SQL initialization script
   copy:
     src: init_db.sql

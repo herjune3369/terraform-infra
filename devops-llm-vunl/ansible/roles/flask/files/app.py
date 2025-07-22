@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 import uuid
 from datetime import datetime
+import markdown2
 from vulnService import create_report, get_report, list_reports, delete_report, generate_final_report_md
 
 # 환경변수 로딩
@@ -288,85 +289,191 @@ def view_report(report_id):
         target_system = "웹 애플리케이션"
         final_report = generate_final_report_md(report_id, target_system)
         
+        # Markdown을 HTML로 변환
+        html_content = markdown2.markdown(final_report, extras=['tables', 'fenced-code-blocks', 'code-friendly'])
+        
         html = f"""
         <!DOCTYPE html>
         <html lang="ko">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>최종 보안 취약점 준수 강화 리포트 - {report_id}</title>
+            <title>웹 취약점 종합 보고서 - {report_id}</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
-                .container {{ max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-                h1 {{ color: #2c3e50; text-align: center; margin-bottom: 30px; }}
-                h2 {{ color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px; }}
-                h3 {{ color: #e74c3c; margin-top: 20px; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-                th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
-                th {{ background-color: #f8f9fa; font-weight: bold; }}
-                .back-link {{ text-align: center; margin-top: 30px; }}
-                .back-link a {{ color: #3498db; text-decoration: none; font-weight: bold; }}
-                .download-link {{ text-align: center; margin: 20px 0; }}
-                .download-link a {{ background-color: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }}
-                pre {{ background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }}
-                blockquote {{ border-left: 4px solid #3498db; padding-left: 15px; margin: 15px 0; color: #555; }}
+                body {{ 
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    margin: 0; 
+                    padding: 20px; 
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                }}
+                .container {{ 
+                    max-width: 1200px; 
+                    margin: 0 auto; 
+                    background: white; 
+                    padding: 40px; 
+                    border-radius: 15px; 
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                }}
+                h1 {{ 
+                    color: #2c3e50; 
+                    text-align: center; 
+                    margin-bottom: 30px; 
+                    font-size: 2.5em;
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+                }}
+                h2 {{ 
+                    color: #34495e; 
+                    border-bottom: 3px solid #3498db; 
+                    padding-bottom: 15px; 
+                    margin-top: 40px; 
+                    font-size: 1.8em;
+                }}
+                h3 {{ 
+                    color: #e74c3c; 
+                    margin-top: 25px; 
+                    background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+                    padding: 15px;
+                    border-left: 5px solid #e74c3c;
+                    border-radius: 0 5px 5px 0;
+                }}
+                table {{ 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin: 25px 0; 
+                    background: white;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                }}
+                th, td {{ 
+                    border: 1px solid #dee2e6; 
+                    padding: 15px; 
+                    text-align: left; 
+                }}
+                th {{ 
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    color: white; 
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }}
+                tr:nth-child(even) {{ background-color: #f8f9fa; }}
+                tr:hover {{ background-color: #e9ecef; }}
+                .back-link {{ 
+                    text-align: center; 
+                    margin-top: 40px; 
+                }}
+                .back-link a {{ 
+                    color: #3498db; 
+                    text-decoration: none; 
+                    font-weight: bold;
+                    padding: 10px 20px;
+                    border: 2px solid #3498db;
+                    border-radius: 25px;
+                    transition: all 0.3s ease;
+                }}
+                .back-link a:hover {{ 
+                    background-color: #3498db; 
+                    color: white;
+                }}
+                .download-link {{ 
+                    text-align: center; 
+                    margin: 30px 0; 
+                }}
+                .download-link a {{ 
+                    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); 
+                    color: white; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 25px; 
+                    display: inline-block;
+                    font-weight: bold;
+                    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+                    transition: all 0.3s ease;
+                }}
+                .download-link a:hover {{ 
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+                }}
+                pre {{ 
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                    padding: 20px; 
+                    border-radius: 8px; 
+                    overflow-x: auto;
+                    border-left: 4px solid #3498db;
+                }}
+                blockquote {{ 
+                    border-left: 5px solid #3498db; 
+                    padding: 20px; 
+                    margin: 20px 0; 
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    border-radius: 0 8px 8px 0;
+                }}
+                .report-header {{
+                    text-align: center;
+                    margin-bottom: 30px;
+                    padding: 20px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border-radius: 10px;
+                }}
+                .report-id {{
+                    font-size: 1.2em;
+                    opacity: 0.9;
+                    margin-top: 10px;
+                }}
+                ul, ol {{
+                    padding-left: 25px;
+                }}
+                li {{
+                    margin: 8px 0;
+                    line-height: 1.6;
+                }}
+                strong {{
+                    color: #2c3e50;
+                }}
+                .section-divider {{
+                    height: 2px;
+                    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                    margin: 30px 0;
+                    border-radius: 1px;
+                }}
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>▶ 최종 보안 취약점 준수 강화 리포트</h1>
-                <p style="text-align: center; color: #7f8c8d;">보고서 ID: {report_id}</p>
+                <div class="report-header">
+                    <h1>🔒 웹 취약점 종합 보고서</h1>
+                    <div class="report-id">보고서 ID: {report_id}</div>
+                </div>
                 
                 <div class="download-link">
                     <a href="/api/vuln/report/{report_id}/final" target="_blank">📄 Markdown 보고서 다운로드</a>
                 </div>
+                
+                <div class="section-divider"></div>
+                
+                {html_content}
+                
+                <div class="back-link">
+                    <a href="/">← 메인으로 돌아가기</a>
+                </div>
+            </div>
+        </body>
+        </html>
         """
         
-        # 최종 보고서를 HTML로 변환하여 표시
-        if not vulnerabilities:
-            html += '<div style="text-align: center; padding: 50px; color: #7f8c8d;">취약점이 발견되지 않았습니다.</div>'
-        else:
-            # Markdown을 HTML로 변환 (개선된 변환)
-            report_html = final_report
-            
-            # 제목 처리
-            report_html = report_html.replace('# ▶ 웹 취약점 종합 보고서', '<h1 style="color: #2c3e50; text-align: center; margin-bottom: 30px;">▶ 웹 취약점 종합 보고서</h1>')
-            
-            # 섹션 제목 처리
-            report_html = report_html.replace('## 1. 보고서 개요', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">1. 보고서 개요</h2>')
-            report_html = report_html.replace('## 2. 취약점 요약 Table', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">2. 취약점 요약 Table</h2>')
-            report_html = report_html.replace('## 3. 취약점별 위험성 및 유사 해킹 사고 사례', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">3. 취약점별 위험성 및 유사 해킹 사고 사례</h2>')
-            report_html = report_html.replace('## 4. 경영진 보고사항 (Management Brief)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">4. 경영진 보고사항 (Management Brief)</h2>')
-            report_html = report_html.replace('## 5. 메타인지 교육 제안 (Metacognition Training)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">5. 메타인지 교육 제안 (Metacognition Training)</h2>')
-            report_html = report_html.replace('## 6. 종합 대응 로드맵 (Comprehensive Response Roadmap)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">6. 종합 대응 로드맵 (Comprehensive Response Roadmap)</h2>')
-            
-            # 서브 제목 처리
-            report_html = report_html.replace('### ', '<h3 style="color: #e74c3c; margin-top: 20px; background-color: #f8f9fa; padding: 10px; border-left: 4px solid #e74c3c;">')
-            report_html = report_html.replace('\n\n', '</h3>')
-            
-            # 목표 블록 처리
-            report_html = report_html.replace('> **목표**:', '<blockquote style="border-left: 4px solid #3498db; padding: 15px; margin: 15px 0; background-color: #f8f9fa; color: #555;"><strong>목표:</strong>')
-            report_html = report_html.replace('\n\n', '</blockquote>')
-            
-            # 테이블 처리
-            lines = report_html.split('\n')
-            in_table = False
-            table_html = ''
-            
-            for i, line in enumerate(lines):
-                if '|' in line and not in_table:
-                    in_table = True
-                    table_html = '<table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: white;">'
-                    if line.strip().startswith('|'):
-                        # 헤더 행
-                        cells = [cell.strip() for cell in line.split('|')[1:-1]]
-                        table_html += '<tr>'
-                        for cell in cells:
-                            table_html += f'<th style="border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #f8f9fa; font-weight: bold;">{cell}</th>'
-                        table_html += '</tr>'
-                elif '|' in line and in_table:
-                    cells = [cell.strip() for cell in line.split('|')[1:-1]]
-                    if not all(cell.startswith('-') for cell in cells):  # 구분선 제외
+        return html
+        
+    except Exception as e:
+        return f"""
+        <div style="text-align: center; padding: 50px;">
+            <h2>❌ 오류가 발생했습니다</h2>
+            <p style="color: #e74c3c;">{str(e)}</p>
+            <a href="/" style="color: #3498db;">← 메인으로 돌아가기</a>
+        </div>
+        """
                         table_html += '<tr>'
                         for cell in cells:
                             table_html += f'<td style="border: 1px solid #ddd; padding: 12px; text-align: left;">{cell}</td>'

@@ -293,9 +293,17 @@ def view_report(report_id):
         
         vulnerabilities = report_items.get('vulnerabilities', [])
         
-        # 최종 보고서 생성
+        # 최종 보고서 생성 (이미지 파일명 포함)
         target_system = "웹 애플리케이션"
-        final_report = generate_final_report_md(report_id, target_system)
+        image_filename = report_items.get('image_filename', 'unknown.jpg')
+        
+        # report_generator를 직접 호출하여 이미지 파일명 전달
+        from report_generator import generate_final_report
+        final_report = generate_final_report(
+            vuln_list=vulnerabilities,
+            target_system=target_system,
+            image_filename=image_filename
+        )
         
         # Markdown을 간단한 HTML로 변환
         html_content = final_report

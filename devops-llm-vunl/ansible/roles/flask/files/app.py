@@ -330,17 +330,15 @@ def view_report(report_id):
             report_html = final_report
             
             # 제목 처리
-            report_html = report_html.replace('# ▶ 최종 보안 취약점 준수 강화 리포트', '<h1 style="color: #2c3e50; text-align: center; margin-bottom: 30px;">▶ 최종 보안 취약점 준수 강화 리포트</h1>')
+            report_html = report_html.replace('# ▶ 웹 취약점 종합 보고서', '<h1 style="color: #2c3e50; text-align: center; margin-bottom: 30px;">▶ 웹 취약점 종합 보고서</h1>')
             
             # 섹션 제목 처리
             report_html = report_html.replace('## 1. 보고서 개요', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">1. 보고서 개요</h2>')
             report_html = report_html.replace('## 2. 취약점 요약 Table', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">2. 취약점 요약 Table</h2>')
-            report_html = report_html.replace('## 3. 지각된 위험성 (Perceived Risk)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">3. 지각된 위험성 (Perceived Risk)</h2>')
-            report_html = report_html.replace('## 4. 유사 해킹 사고 사례 (Incident Case Studies)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">4. 유사 해킹 사고 사례 (Incident Case Studies)</h2>')
-            report_html = report_html.replace('## 5. 경영진 권고사항 (Management Engagement)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">5. 경영진 권고사항 (Management Engagement)</h2>')
-            report_html = report_html.replace('## 6. 메타인지 교육 제안 (Metacognition Training)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">6. 메타인지 교육 제안 (Metacognition Training)</h2>')
-            report_html = report_html.replace('## 7. 보안교육·처벌 명확성 (Education & Punishment Clarity)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">7. 보안교육·처벌 명확성 (Education & Punishment Clarity)</h2>')
-            report_html = report_html.replace('## 8. 부록(Appendix)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">8. 부록(Appendix)</h2>')
+            report_html = report_html.replace('## 3. 취약점별 위험성 및 유사 해킹 사고 사례', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">3. 취약점별 위험성 및 유사 해킹 사고 사례</h2>')
+            report_html = report_html.replace('## 4. 경영진 보고사항 (Management Brief)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">4. 경영진 보고사항 (Management Brief)</h2>')
+            report_html = report_html.replace('## 5. 메타인지 교육 제안 (Metacognition Training)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">5. 메타인지 교육 제안 (Metacognition Training)</h2>')
+            report_html = report_html.replace('## 6. 종합 대응 로드맵 (Comprehensive Response Roadmap)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">6. 종합 대응 로드맵 (Comprehensive Response Roadmap)</h2>')
             
             # 서브 제목 처리
             report_html = report_html.replace('### ', '<h3 style="color: #e74c3c; margin-top: 20px; background-color: #f8f9fa; padding: 10px; border-left: 4px solid #e74c3c;">')

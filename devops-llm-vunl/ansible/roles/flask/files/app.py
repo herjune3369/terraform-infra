@@ -326,17 +326,85 @@ def view_report(report_id):
         if not vulnerabilities:
             html += '<div style="text-align: center; padding: 50px; color: #7f8c8d;">취약점이 발견되지 않았습니다.</div>'
         else:
-            # Markdown을 HTML로 변환 (간단한 변환)
-            report_html = final_report.replace('\n\n', '</p><p>')
-            report_html = report_html.replace('\n', '<br>')
-            report_html = report_html.replace('## ', '<h2>').replace('\n', '</h2>')
-            report_html = report_html.replace('### ', '<h3>').replace('\n', '</h3>')
-            report_html = report_html.replace('* ', '<li>').replace('\n', '</li>')
-            report_html = report_html.replace('| ', '<td>').replace(' |', '</td>')
-            report_html = report_html.replace('---', '<hr>')
-            report_html = report_html.replace('> ', '<blockquote>').replace('\n', '</blockquote>')
+            # Markdown을 HTML로 변환 (개선된 변환)
+            report_html = final_report
             
-            html += f'<div style="text-align: left;">{report_html}</div>'
+            # 제목 처리
+            report_html = report_html.replace('# ▶ 최종 보안 취약점 준수 강화 리포트', '<h1 style="color: #2c3e50; text-align: center; margin-bottom: 30px;">▶ 최종 보안 취약점 준수 강화 리포트</h1>')
+            
+            # 섹션 제목 처리
+            report_html = report_html.replace('## 1. 보고서 개요', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">1. 보고서 개요</h2>')
+            report_html = report_html.replace('## 2. 취약점 요약 Table', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">2. 취약점 요약 Table</h2>')
+            report_html = report_html.replace('## 3. 지각된 위험성 (Perceived Risk)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">3. 지각된 위험성 (Perceived Risk)</h2>')
+            report_html = report_html.replace('## 4. 유사 해킹 사고 사례 (Incident Case Studies)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">4. 유사 해킹 사고 사례 (Incident Case Studies)</h2>')
+            report_html = report_html.replace('## 5. 경영진 권고사항 (Management Engagement)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">5. 경영진 권고사항 (Management Engagement)</h2>')
+            report_html = report_html.replace('## 6. 메타인지 교육 제안 (Metacognition Training)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">6. 메타인지 교육 제안 (Metacognition Training)</h2>')
+            report_html = report_html.replace('## 7. 보안교육·처벌 명확성 (Education & Punishment Clarity)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">7. 보안교육·처벌 명확성 (Education & Punishment Clarity)</h2>')
+            report_html = report_html.replace('## 8. 부록(Appendix)', '<h2 style="color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px;">8. 부록(Appendix)</h2>')
+            
+            # 서브 제목 처리
+            report_html = report_html.replace('### ', '<h3 style="color: #e74c3c; margin-top: 20px; background-color: #f8f9fa; padding: 10px; border-left: 4px solid #e74c3c;">')
+            report_html = report_html.replace('\n\n', '</h3>')
+            
+            # 목표 블록 처리
+            report_html = report_html.replace('> **목표**:', '<blockquote style="border-left: 4px solid #3498db; padding: 15px; margin: 15px 0; background-color: #f8f9fa; color: #555;"><strong>목표:</strong>')
+            report_html = report_html.replace('\n\n', '</blockquote>')
+            
+            # 테이블 처리
+            lines = report_html.split('\n')
+            in_table = False
+            table_html = ''
+            
+            for i, line in enumerate(lines):
+                if '|' in line and not in_table:
+                    in_table = True
+                    table_html = '<table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: white;">'
+                    if line.strip().startswith('|'):
+                        # 헤더 행
+                        cells = [cell.strip() for cell in line.split('|')[1:-1]]
+                        table_html += '<tr>'
+                        for cell in cells:
+                            table_html += f'<th style="border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #f8f9fa; font-weight: bold;">{cell}</th>'
+                        table_html += '</tr>'
+                elif '|' in line and in_table:
+                    cells = [cell.strip() for cell in line.split('|')[1:-1]]
+                    if not all(cell.startswith('-') for cell in cells):  # 구분선 제외
+                        table_html += '<tr>'
+                        for cell in cells:
+                            table_html += f'<td style="border: 1px solid #ddd; padding: 12px; text-align: left;">{cell}</td>'
+                        table_html += '</tr>'
+                elif in_table and '|' not in line:
+                    in_table = False
+                    table_html += '</table>'
+                    lines[i-1] = table_html
+                    table_html = ''
+            
+            report_html = '\n'.join(lines)
+            
+            # 리스트 처리
+            report_html = report_html.replace('* **', '<li style="margin: 8px 0;"><strong>')
+            report_html = report_html.replace('* ', '<li style="margin: 8px 0;">')
+            report_html = report_html.replace('\n\n', '</li>')
+            
+            # 구분선 처리
+            report_html = report_html.replace('---', '<hr style="border: none; border-top: 2px solid #3498db; margin: 30px 0;">')
+            
+            # JSON 코드 블록 처리
+            report_html = report_html.replace('```json', '<pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd;"><code>')
+            report_html = report_html.replace('```', '</code></pre>')
+            
+            # 일반 텍스트 처리
+            report_html = report_html.replace('\n\n', '</p><p style="margin: 15px 0; line-height: 1.6;">')
+            report_html = report_html.replace('\n', '<br>')
+            
+            # 리스트 래핑
+            report_html = report_html.replace('<li style="margin: 8px 0;">', '<ul style="margin: 15px 0; padding-left: 20px;"><li style="margin: 8px 0;">')
+            report_html = report_html.replace('</li>', '</li></ul>')
+            
+            # 최종 정리
+            report_html = f'<div style="text-align: left; line-height: 1.6;">{report_html}</div>'
+            
+            html += report_html
         
         html += """
                 <div class="back-link">

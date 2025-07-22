@@ -284,70 +284,59 @@ def view_report(report_id):
         
         vulnerabilities = report_items.get('vulnerabilities', [])
         
+        # 최종 보고서 생성
+        target_system = "웹 애플리케이션"
+        final_report = generate_final_report_md(report_id, target_system)
+        
         html = f"""
         <!DOCTYPE html>
         <html lang="ko">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>취약점 분석 보고서 - {report_id}</title>
+            <title>최종 보안 취약점 준수 강화 리포트 - {report_id}</title>
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
-                .container {{ max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .container {{ max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
                 h1 {{ color: #2c3e50; text-align: center; margin-bottom: 30px; }}
-                .vulnerability-card {{ border: 1px solid #ddd; margin: 16px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-                .vulnerability-card h3 {{ color: #e74c3c; margin-top: 0; }}
-                .vulnerability-card ul {{ margin: 10px 0; padding-left: 20px; }}
-                .vulnerability-card li {{ margin: 5px 0; }}
+                h2 {{ color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px; }}
+                h3 {{ color: #e74c3c; margin-top: 20px; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+                th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+                th {{ background-color: #f8f9fa; font-weight: bold; }}
                 .back-link {{ text-align: center; margin-top: 30px; }}
                 .back-link a {{ color: #3498db; text-decoration: none; font-weight: bold; }}
+                .download-link {{ text-align: center; margin: 20px 0; }}
+                .download-link a {{ background-color: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+                pre {{ background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+                blockquote {{ border-left: 4px solid #3498db; padding-left: 15px; margin: 15px 0; color: #555; }}
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>🔍 취약점 분석 보고서</h1>
+                <h1>▶ 최종 보안 취약점 준수 강화 리포트</h1>
                 <p style="text-align: center; color: #7f8c8d;">보고서 ID: {report_id}</p>
+                
+                <div class="download-link">
+                    <a href="/api/vuln/report/{report_id}/final" target="_blank">📄 Markdown 보고서 다운로드</a>
+                </div>
         """
         
+        # 최종 보고서를 HTML로 변환하여 표시
         if not vulnerabilities:
             html += '<div style="text-align: center; padding: 50px; color: #7f8c8d;">취약점이 발견되지 않았습니다.</div>'
         else:
-            for item in vulnerabilities:
-                html += f"""
-                <div class="vulnerability-card">
-                    <h3>🚨 {item.get('type', 'Unknown')} ({item.get('vuln_id', 'N/A')})</h3>
-                    <div><strong>위험성:</strong> {item.get('risk', 'N/A')}</div>
-                    <div>
-                        <strong>📋 유사 사고 사례:</strong>
-                        <ul>
-                """
-                
-                incidents = item.get('incidents', [])
-                for inc in incidents:
-                    html += f"""
-                            <li>
-                                <strong>{inc.get('title', 'N/A')}</strong> ({inc.get('date', 'N/A')}): {inc.get('summary', 'N/A')}
-                            </li>
-                    """
-                
-                html += """
-                        </ul>
-                    </div>
-                    <div>
-                        <strong>🛡️ 대응 방안:</strong>
-                        <ul>
-                """
-                
-                management = item.get('management', {})
-                for key, value in management.items():
-                    html += f'<li><strong>{key}</strong>: {value}</li>'
-                
-                html += f"""
-                        </ul>
-                    </div>
-                    <div><strong>🎓 메타인지 교육:</strong> {item.get('metacognition', 'N/A')}</div>
-                </div>
-                """
+            # Markdown을 HTML로 변환 (간단한 변환)
+            report_html = final_report.replace('\n\n', '</p><p>')
+            report_html = report_html.replace('\n', '<br>')
+            report_html = report_html.replace('## ', '<h2>').replace('\n', '</h2>')
+            report_html = report_html.replace('### ', '<h3>').replace('\n', '</h3>')
+            report_html = report_html.replace('* ', '<li>').replace('\n', '</li>')
+            report_html = report_html.replace('| ', '<td>').replace(' |', '</td>')
+            report_html = report_html.replace('---', '<hr>')
+            report_html = report_html.replace('> ', '<blockquote>').replace('\n', '</blockquote>')
+            
+            html += f'<div style="text-align: left;">{report_html}</div>'
         
         html += """
                 <div class="back-link">

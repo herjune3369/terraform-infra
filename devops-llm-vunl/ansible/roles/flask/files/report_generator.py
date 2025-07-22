@@ -128,17 +128,43 @@ def generate_final_report(
         report += "진단된 취약점 정보가 부족하여 구체적인 공격 시나리오를 제시하기 어렵습니다. 추가 진단을 통해 취약점을 정확히 파악한 후 상세한 공격 시나리오를 제공하겠습니다.\n\n"
     
     report += "**즉시 대응 (0–7일)**\n\n"
-    report += "* 모든 취약점 엔드포인트 및 관리자 URL 외부 접근 차단\n"
-    report += "* WAF 규칙으로 변수 조작·스크립트 삽입 요청 차단\n"
+    
+    # 실제 취약점에 따른 즉시 대응 방안
+    if auth_vulns:
+        report += f"* {', '.join(auth_vulns)} 관련 엔드포인트 외부 접근 차단\n"
+    if upload_vulns:
+        report += f"* {', '.join(upload_vulns)} 기능 임시 비활성화 및 파일 업로드 제한\n"
+    if xss_vulns:
+        report += f"* {', '.join(xss_vulns)} 방지를 위한 WAF 규칙 즉시 적용\n"
+    if info_vulns:
+        report += f"* {', '.join(info_vulns)} 관련 디버그 모드 및 로그 노출 차단\n"
+    
     report += "* 24시간 내 긴급 패치 완료 및 모의 해킹 재검증\n\n"
     
     report += "**단기 강화 (1–3주)**\n\n"
-    report += "* 전사 코드 리뷰 및 자동화 스캔 도구 도입\n"
+    
+    # 취약점 유형에 따른 단기 강화 방안
+    if auth_vulns:
+        report += "* 인증·권한 관리 시스템 전면 점검 및 강화\n"
+    if upload_vulns:
+        report += "* 파일 업로드 검증 로직 재설계 및 화이트리스트 적용\n"
+    if xss_vulns:
+        report += "* 입력값 검증 및 출력 인코딩 표준화\n"
+    if info_vulns:
+        report += "* 정보 노출 방지를 위한 에러 처리 및 로깅 정책 수립\n"
+    
     report += "* 전 직원 대상 보안 인식 교육 및 모의 해킹 워크숍\n\n"
     
     report += "**중장기 체계화 (1–3개월+)**\n\n"
-    report += "* 보안 KPI 설정 및 분기별 CISO 검토 회의 제도화\n"
-    report += "* SOC·SIEM 고도화, 외부 보안 인증(ISMS-P 등) 준비\n\n"
+    
+    # 취약점 심각도에 따른 중장기 계획
+    if high_severity:
+        report += "* 고위험 취약점 재발 방지를 위한 보안 개발 생명주기(SDLC) 도입\n"
+    if medium_severity:
+        report += "* 중간 위험 취약점 모니터링을 위한 보안 KPI 설정\n"
+    
+    report += "* 분기별 CISO 검토 회의 제도화 및 SOC·SIEM 고도화\n"
+    report += "* 외부 보안 인증(ISMS-P 등) 준비 및 보안 성숙도 평가\n\n"
     
     report += "---\n\n## 5. 메타인지 교육 제안 (Metacognition Training)\n\n"
     report += "> **목표**: 전직원 대상 메타인지 역량 강화로 자발적 위험 탐지·보고 문화 조성\n\n"
@@ -147,14 +173,32 @@ def generate_final_report(
     report += "1. **교육 목표**: '내가 보는 정보의 안전성'을 스스로 점검하고 이상 징후를 조기에 식별\n"
     report += "2. **커리큘럼**:\n\n"
     report += "   * **위협 모델링 워크숍**: 실제 취약점 사례 분석 및 리스크 매핑\n"
-    report += "   * **모의해킹 실습**: XSS·RCE 시나리오 구성 및 대응 경험\n"
+    
+    # 실제 취약점에 따른 모의해킹 실습
+    if xss_vulns:
+        report += f"   * **모의해킹 실습**: {', '.join(xss_vulns)} 시나리오 구성 및 대응 경험\n"
+    if upload_vulns:
+        report += f"   * **파일 업로드 보안 실습**: {', '.join(upload_vulns)} 취약점 탐지 및 방어 방법\n"
+    if auth_vulns:
+        report += f"   * **인증 보안 실습**: {', '.join(auth_vulns)} 취약점 탐지 및 대응 방법\n"
+    if info_vulns:
+        report += f"   * **정보 보호 실습**: {', '.join(info_vulns)} 취약점 탐지 및 방어 방법\n"
+    
     report += "   * **인지 회고 세션**: 탐지 과정 기록 후 팀별 공유·피드백\n"
     report += "   * **퀴즈 기반 점검**: 비정형 취약점 탐지 능력 검증\n"
     report += "   * **행동 체크리스트**: 배포 전 필수 보안 점검 리스트 실습\n"
     report += "3. **기대 효과**:\n\n"
-    report += "   * 취약점 탐지 속도 50% 단축\n"
-    report += "   * 자발적 보안 리포트 제출 건수 2배 증가\n"
-    report += "   * 사고 대응 시간 평균 40% 개선\n\n"
+    
+    # 취약점 수에 따른 기대 효과
+    total_vulns = len(vuln_list)
+    if total_vulns > 0:
+        report += f"   * {total_vulns}개 취약점 유형별 탐지 능력 향상\n"
+        report += "   * 자발적 보안 리포트 제출 건수 증가\n"
+        report += "   * 사고 대응 시간 개선\n\n"
+    else:
+        report += "   * 취약점 탐지 능력 향상\n"
+        report += "   * 자발적 보안 리포트 제출 건수 증가\n"
+        report += "   * 사고 대응 시간 개선\n\n"
     
     report += "---\n\n## 6. 종합 대응 로드맵 (Comprehensive Response Roadmap)\n\n"
     

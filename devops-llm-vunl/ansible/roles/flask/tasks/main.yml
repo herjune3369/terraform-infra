@@ -56,8 +56,31 @@
 
 - name: Initialize database
   shell: |
-    mysql -h {{ rds_endpoint }} -u admin -p'{{ db_password }}' < /home/ubuntu/myapp/init_db.sql
-  ignore_errors: true
+    echo "🔧 데이터베이스 초기화 시작..."
+    echo "📊 RDS 엔드포인트: {{ rds_endpoint }}"
+    echo "👤 사용자: admin"
+    
+    # 데이터베이스 연결 테스트
+    mysql -h {{ rds_endpoint }} -u admin -p'{{ db_password }}' -e "SELECT 1;" || {
+      echo "❌ 데이터베이스 연결 실패"
+      exit 1
+    }
+    
+    # 데이터베이스 초기화 스크립트 실행
+    mysql -h {{ rds_endpoint }} -u admin -p'{{ db_password }}' < /home/ubuntu/myapp/init_db.sql && {
+      echo "✅ 데이터베이스 초기화 완료"
+      
+      # 테이블 생성 확인
+      mysql -h {{ rds_endpoint }} -u admin -p'{{ db_password }}' -e "USE flask_app; SHOW TABLES;" || {
+        echo "❌ 테이블 생성 확인 실패"
+        exit 1
+      }
+    } || {
+      echo "❌ 데이터베이스 초기화 실패"
+      exit 1
+    }
+  register: db_init_result
+  failed_when: db_init_result.rc != 0
 
 - name: Create environment file for Flask (.env)
   copy:

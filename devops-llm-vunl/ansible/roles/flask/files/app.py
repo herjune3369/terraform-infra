@@ -263,6 +263,15 @@ def get_final_report(report_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """업로드된 이미지 파일을 웹에서 볼 수 있도록 제공"""
+    try:
+        from flask import send_from_directory
+        return send_from_directory('uploads', filename)
+    except Exception as e:
+        return jsonify({"error": f"이미지를 찾을 수 없습니다: {str(e)}"}), 404
+
 @app.route('/', methods=['GET'])
 def home():
     """메인 페이지 - 취약점 진단 시스템"""

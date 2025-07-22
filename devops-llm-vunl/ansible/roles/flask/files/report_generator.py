@@ -395,9 +395,9 @@ def generate_final_report(
     
     # 중기 체계화 단계
     medium_activities = []
-    if high_severity:
+    if high_severity_count > 0:
         medium_activities.append("고위험 취약점 재발 방지를 위한 SDLC 도입")
-    if medium_severity:
+    if medium_severity_count > 0:
         medium_activities.append("중간 위험 취약점 모니터링을 위한 KPI 설정")
     
     medium_activities.extend([

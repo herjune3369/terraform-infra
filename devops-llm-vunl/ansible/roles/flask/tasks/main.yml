@@ -60,9 +60,20 @@
   ignore_errors: true
 
 - name: Create environment file for Flask (.env)
-  template:
-    src: .env.j2
+  copy:
     dest: /home/ubuntu/myapp/.env
+    content: |
+      FLASK_APP=app.py
+      FLASK_ENV=production
+      FLASK_DEBUG=0
+      RDS_HOST={{ rds_endpoint }}
+      RDS_USER=admin
+      RDS_PASSWORD={{ db_password }}
+      RDS_DATABASE=flask_app
+      GEMINI_API_KEY=your-gemini-api-key-here
+      UPLOAD_FOLDER=uploads
+      MAX_CONTENT_LENGTH=16777216
+      SECRET_KEY=your-secret-key-here
     owner: ubuntu
     group: ubuntu
     mode: '0600'
@@ -118,3 +129,20 @@
   args:
     executable: /bin/bash
   become: true
+
+- name: Wait for Flask app to start
+  wait_for:
+    port: 5000
+    host: "{{ ansible_default_ipv4.address }}"
+    delay: 10
+    timeout: 60
+  become: true
+
+- name: Check Flask app logs
+  shell: tail -20 /home/ubuntu/myapp/flask.log
+  register: flask_logs
+  become: true
+
+- name: Display Flask logs
+  debug:
+    var: flask_logs.stdout_lines

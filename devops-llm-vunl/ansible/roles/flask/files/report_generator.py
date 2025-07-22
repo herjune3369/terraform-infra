@@ -49,7 +49,7 @@ def generate_final_report(
         report += f"| {vuln.get('id', 'N/A')} | {vuln.get('type', 'N/A')} | {vuln.get('severity', 'N/A')} | {vuln.get('module', 'N/A')} | {vuln.get('summary', 'N/A')} |\n"
     
     report += "\n---\n\n## 3. 취약점별 위험성 및 유사 해킹 사고 사례\n\n"
-    report += "각 취약점에 대해 "위험성(5줄 이상)"과 "유사 해킹 사고 사례(1건, 5줄 이상)"를 한 묶음으로 정리했습니다.\n\n"
+    report += "각 취약점에 대해 \"위험성(5줄 이상)\"과 \"유사 해킹 사고 사례(1건, 5줄 이상)\"를 한 묶음으로 정리했습니다.\n\n"
     
     # 3. 취약점별 위험성 및 유사 해킹 사고 사례
     for vuln in vuln_list:

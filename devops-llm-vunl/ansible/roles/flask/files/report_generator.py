@@ -105,6 +105,98 @@ def generate_final_report(
     vuln_types = [v.get('type', '') for v in vuln_list if v.get('type')]
     
     if vuln_types:
+        # 웹 취약점 진단 결과 심각성 평가 및 경영진 주의 환기
+        report += "**⚠️ 경영진 주의 환기: 웹 취약점 연계 APT 공격 위험성 평가**\n\n"
+        
+        # 취약점 수와 심각도 기반 위험성 평가
+        total_vulns = len(vuln_list)
+        high_severity_count = len([v for v in vuln_list if v.get('severity') == '높음'])
+        medium_severity_count = len([v for v in vuln_list if v.get('severity') == '중간'])
+        
+        # 취약점 유형별 위험도 분석
+        auth_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['인증', '로그인', '세션', '권한', 'sql', '인젝션'])]
+        upload_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['업로드', '파일', '경로', '순회'])]
+        xss_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['xss', '스크립트', '크로스사이트'])]
+        info_vulns = [v for v in vuln_types if any(keyword in v.lower() for keyword in ['정보', '누출', '노출', '디버그', '에러'])]
+        
+        # 이미지에서 읽어온 위험성 평가 데이터 활용
+        risk_assessments = []
+        for vuln in vuln_list:
+            risk = vuln.get('risk', '')
+            if risk and risk != '위험성 정보가 없습니다.':
+                risk_assessments.append(risk)
+        
+        # 위험성 등급 결정 - 이미지 데이터 기반
+        if high_severity_count >= 3 or (len(upload_vulns) > 0 and len(auth_vulns) > 0):
+            risk_level = "🔴 **극도로 위험 (Critical Risk)**"
+        elif high_severity_count >= 1 or len(upload_vulns) > 0:
+            risk_level = "🟠 **매우 위험 (High Risk)**"
+        elif total_vulns >= 3:
+            risk_level = "🟡 **위험 (Medium Risk)**"
+        else:
+            risk_level = "🟢 **낮은 위험 (Low Risk)**"
+        
+        # 이미지에서 읽어온 위험성 설명 사용
+        if risk_assessments:
+            risk_description = risk_assessments[0]  # 첫 번째 위험성 설명 사용
+        else:
+            risk_description = f"총 {total_vulns}개의 취약점이 발견되어 보안 대응이 필요합니다."
+        
+        # 비즈니스 영향도 - 취약점 수와 유형 기반 동적 생성
+        if total_vulns >= 5:
+            business_impact = "조직의 핵심 비즈니스에 심각한 위협이 될 수 있습니다."
+        elif total_vulns >= 3:
+            business_impact = "조직의 안정성에 영향을 줄 수 있는 위험입니다."
+        else:
+            business_impact = "조직의 안정성에 미미한 영향을 줄 수 있습니다."
+        
+        report += f"**위험성 등급**: {risk_level}\n\n"
+        report += f"**진단 결과 요약**:\n"
+        report += f"* 총 발견 취약점: {total_vulns}개\n"
+        report += f"* 높은 심각도: {high_severity_count}개\n"
+        report += f"* 중간 심각도: {medium_severity_count}개\n"
+        report += f"* 인증 관련 취약점: {len(auth_vulns)}개\n"
+        report += f"* 파일 업로드 취약점: {len(upload_vulns)}개\n"
+        report += f"* XSS 취약점: {len(xss_vulns)}개\n"
+        report += f"* 정보 누출 취약점: {len(info_vulns)}개\n\n"
+        
+        report += f"**위험성 평가**: {risk_description}\n\n"
+        report += f"**비즈니스 영향도**: {business_impact}\n\n"
+        
+        # 경영진 주의 환기 메시지
+        report += "**🚨 경영진 특별 주의사항**\n\n"
+        report += "> 💡 **현재 발견된 웹 취약점들은 단독으로도 위험하지만, APT(Advanced Persistent Threat) 공격자들이 이들을 연계하여 사용할 경우 조직 전체를 마비시킬 수 있는 치명적인 위협이 됩니다.**\n\n"
+        
+        if len(upload_vulns) > 0:
+            report += f"* **파일 업로드 취약점({len(upload_vulns)}개)**: 공격자가 웹 셸을 업로드하여 서버를 완전히 장악할 수 있습니다.\n"
+        if len(auth_vulns) > 0:
+            report += f"* **인증 취약점({len(auth_vulns)}개)**: 관리자 권한을 획득하여 모든 시스템에 접근할 수 있습니다.\n"
+        if len(xss_vulns) > 0:
+            report += f"* **XSS 취약점({len(xss_vulns)}개)**: 사용자 세션을 탈취하여 내부 데이터에 무단 접근할 수 있습니다.\n"
+        if len(info_vulns) > 0:
+            report += f"* **정보 누출 취약점({len(info_vulns)}개)**: 내부 시스템 구조와 데이터베이스 정보를 노출시킵니다.\n"
+        
+        report += "\n**📊 APT 공격 연계 위험도**: "
+        if len(upload_vulns) > 0 and len(auth_vulns) > 0:
+            report += "**극도로 높음** - 파일 업로드와 인증 취약점이 동시에 존재하여 완전한 시스템 장악 가능\n"
+        elif len(upload_vulns) > 0 or len(auth_vulns) > 0:
+            report += "**매우 높음** - 핵심 취약점이 존재하여 심각한 보안 위협\n"
+        elif total_vulns >= 3:
+            report += "**높음** - 다중 취약점으로 인한 복합적 공격 위험\n"
+        else:
+            report += "**중간** - 제한적이지만 연계 공격 가능성 존재\n"
+        
+        report += "\n**⏰ 권장 대응 시한**: "
+        if high_severity_count >= 3 or (len(upload_vulns) > 0 and len(auth_vulns) > 0):
+            report += "**즉시 (24시간 이내)**\n"
+        elif high_severity_count >= 1 or len(upload_vulns) > 0:
+            report += "**긴급 (72시간 이내)**\n"
+        elif total_vulns >= 3:
+            report += "**신속 (1주일 이내)**\n"
+        else:
+            report += "**일반 (2주일 이내)**\n"
+        
+        report += "\n---\n\n"
         report += "**📋 공격 단계별 상세 시나리오**\n\n"
         
         # 1단계: 정찰 및 정보 수집

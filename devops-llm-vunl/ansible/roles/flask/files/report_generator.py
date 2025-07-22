@@ -2,6 +2,8 @@ import json
 from datetime import datetime
 from typing import List, Dict, Optional
 
+
+
 def generate_final_report(
     vuln_list: List[Dict], 
     target_system: str = "웹 애플리케이션",
@@ -44,9 +46,16 @@ def generate_final_report(
 | -------- | ----------------- | --- | -------------------------------- | ------------------------------------ |
 """
     
-    # 2. 취약점 요약 테이블
-    for vuln in vuln_list:
-        report += f"| {vuln.get('id', 'N/A')} | {vuln.get('type', 'N/A')} | {vuln.get('severity', 'N/A')} | {vuln.get('module', 'N/A')} | {vuln.get('summary', 'N/A')} |\n"
+    # 2. 취약점 요약 테이블 - 실제 이미지 데이터 사용
+    for i, vuln in enumerate(vuln_list, 1):
+        # 이미지에서 읽어온 실제 데이터 사용
+        vuln_id = vuln.get('id', f'VULN-{i:03d}')
+        vuln_type = vuln.get('type', '알 수 없는 취약점')
+        severity = vuln.get('severity', '중간')
+        module = vuln.get('module', '알 수 없는 모듈')
+        summary = vuln.get('summary', '취약점 요약 정보가 없습니다.')
+        
+        report += f"| {vuln_id} | {vuln_type} | {severity} | {module} | {summary} |\n"
     
     report += "\n---\n\n## 3. 취약점별 위험성 및 유사 해킹 사고 사례\n\n"
     report += "각 취약점에 대해 \"위험성(5줄 이상)\"과 \"유사 해킹 사고 사례(1건, 5줄 이상)\"를 한 묶음으로 정리했습니다.\n\n"

@@ -366,6 +366,10 @@ def generate_final_report(
                 risk_description += "\n"
         
         # 💰 **비즈니스 영향도 (발견된 취약점 기반 동적 분석)**
+        
+        # 총 위험도 점수 계산
+        total_risk_score = sum(score for _, score in vuln_risk_scores)
+        
         risk_description += f"**💰 비즈니스 영향도 분석 (총 위험도: {total_risk_score}점)**:\n\n"
         
         # 발견된 취약점별 구체적인 비즈니스 영향 계산

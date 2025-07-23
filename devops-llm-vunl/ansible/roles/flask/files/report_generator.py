@@ -163,56 +163,433 @@ def generate_final_report(
         # 🎯 **비즈니스 관점에서 이해하기 쉬운 위험성 평가**
         risk_description = f"**📊 발견된 취약점 현황**: 총 {total_vulns}개의 보안 취약점이 발견되었습니다.\n\n"
         
-        # 이미지에서 읽어온 위험성 정보 우선 활용
-        risk_assessments = []
-        for vuln in vuln_list:
-            risk = vuln.get('risk', '')
-            if risk and risk != '위험성 정보가 없습니다.':
-                risk_assessments.append(risk)
+        # 🔍 **전문가 분석 - 발견된 모든 취약점 종합 검토**
+        risk_description += "**🔍 전문가 종합 분석**:\n"
         
-        if risk_assessments:
-            risk_description += f"**🔍 전문가 분석**: {risk_assessments[0]}\n\n"
+        # 발견된 모든 취약점 유형 수집
+        all_vuln_types = []
+        all_severities = []
+        all_modules = []
         
-        # 🚨 **해킹 가능성 설명 (비즈니스 관점)**
-        risk_description += "**🚨 해킹 공격 가능성**:\n"
-        if owasp_vuln_count > 0:
-            risk_description += f"• **즉시 공격 가능**: OWASP Top 10 취약점 {owasp_vuln_count}개 발견\n"
-            risk_description += f"• **공격자 입장**: 인터넷상의 누구나 이 취약점을 악용할 수 있음\n"
-            risk_description += f"• **공격 도구**: 해커들이 쉽게 구할 수 있는 자동화 도구로 공격 가능\n\n"
-        
-        if total_vulns >= 3:
-            risk_description += f"• **연계 공격 위험**: {total_vulns}개 취약점이 서로 연결되어 더 큰 피해 가능\n"
-            risk_description += f"• **공격 시나리오**: 첫 번째 취약점으로 침입 → 두 번째 취약점으로 권한 확장 → 세 번째 취약점으로 데이터 탈취\n\n"
-        
-        # 💼 **비즈니스 중단 위험 설명**
-        risk_description += "**💼 비즈니스 중단 위험**:\n"
-        if owasp_vuln_count >= 2:
-            risk_description += "• **서비스 중단**: 웹사이트가 해킹되어 고객 접근 불가\n"
-            risk_description += "• **데이터 유출**: 고객 정보, 비즈니스 기밀 등이 외부로 노출\n"
-            risk_description += "• **신뢰도 하락**: 고객과 파트너사의 신뢰 상실\n"
-            risk_description += "• **법적 책임**: 개인정보보호법 위반으로 인한 과태료 및 손해배상\n"
-            risk_description += "• **매출 감소**: 서비스 중단 및 브랜드 이미지 손상으로 인한 매출 하락\n\n"
-        elif total_vulns >= 2:
-            risk_description += "• **부분적 서비스 장애**: 일부 기능이 해킹으로 인해 정상 작동하지 않음\n"
-            risk_description += "• **제한적 데이터 노출**: 일부 정보가 외부로 유출될 위험\n"
-            risk_description += "• **고객 불만 증가**: 서비스 품질 저하로 인한 고객 이탈\n\n"
-        
-        # 🎯 **실제 사례 기반 설명**
-        risk_description += "**🎯 실제 발생 가능한 시나리오**:\n"
-        found_vuln_types = []
         for vuln in vuln_list:
             vuln_type = vuln.get('type', '')
-            if vuln_type and vuln_type not in found_vuln_types:
-                found_vuln_types.append(vuln_type)
+            severity = vuln.get('severity', '')
+            module = vuln.get('module', '')
+            
+            if vuln_type and vuln_type not in all_vuln_types:
+                all_vuln_types.append(vuln_type)
+            if severity and severity not in all_severities:
+                all_severities.append(severity)
+            if module and module not in all_modules:
+                all_modules.append(module)
         
-        if 'SQL Injection' in found_vuln_types or '인젝션' in str(found_vuln_types):
-            risk_description += "• **SQL 인젝션**: 해커가 데이터베이스에 직접 접근하여 고객 정보를 대량으로 탈취\n"
-        if 'XSS' in str(found_vuln_types) or '크로스사이트' in str(found_vuln_types):
-            risk_description += "• **XSS 공격**: 고객 브라우저에 악성 스크립트를 심어 개인정보를 빼돌림\n"
-        if '인증' in str(found_vuln_types) or '로그인' in str(found_vuln_types):
-            risk_description += "• **인증 우회**: 해커가 관리자 권한으로 시스템에 침입하여 모든 데이터에 접근\n"
-        if '파일 업로드' in str(found_vuln_types) or '업로드' in str(found_vuln_types):
-            risk_description += "• **악성 파일 업로드**: 해커가 악성 프로그램을 업로드하여 서버를 완전 장악\n"
+        # 종합 분석 결과 작성
+        risk_description += f"• **발견된 취약점 유형**: {', '.join(all_vuln_types) if all_vuln_types else '일반적인 웹 취약점'}\n"
+        risk_description += f"• **심각도 분포**: {', '.join(all_severities) if all_severities else '분석 중'}\n"
+        risk_description += f"• **영향받는 모듈**: {', '.join(all_modules) if all_modules else '전체 시스템'}\n"
+        
+        # 각 취약점별 상세 분석
+        risk_description += "\n**📋 취약점별 상세 분석**:\n"
+        for i, vuln in enumerate(vuln_list, 1):
+            vuln_type = vuln.get('type', '알 수 없는 취약점')
+            severity = vuln.get('severity', '분석 중')
+            module = vuln.get('module', '전체 시스템')
+            summary = vuln.get('summary', '상세 분석 필요')
+            
+            risk_description += f"**{i}. {vuln_type}** (심각도: {severity})\n"
+            risk_description += f"   - 위치: {module}\n"
+            risk_description += f"   - 설명: {summary}\n"
+            
+            # 위험성 정보가 있으면 추가
+            risk_info = vuln.get('risk', '')
+            if risk_info and risk_info != '위험성 정보가 없습니다.':
+                # 위험성 정보를 간단하게 요약
+                risk_summary = risk_info[:200] + "..." if len(risk_info) > 200 else risk_info
+                risk_description += f"   - 위험성: {risk_summary}\n"
+            
+            risk_description += "\n"
+        
+        # 종합 위험도 평가
+        risk_description += "**⚠️ 종합 위험도 평가**:\n"
+        if owasp_vuln_count >= 3:
+            risk_description += "• **극도로 위험**: OWASP Top 10 취약점이 다수 발견되어 즉시 대응이 필요합니다.\n"
+        elif owasp_vuln_count >= 2:
+            risk_description += "• **매우 위험**: OWASP Top 10 취약점이 발견되어 단기 내 대응이 필요합니다.\n"
+        elif total_vulns >= 2:
+            risk_description += "• **위험**: 여러 취약점이 발견되어 중기 내 대응이 필요합니다.\n"
+        else:
+            risk_description += "• **낮은 위험**: 제한적인 취약점이 발견되어 정기 점검을 권장합니다.\n"
+        
+        risk_description += "\n"
+        
+        # 🚨 **해킹 공격 가능성 설명 (발견된 취약점 기반)**
+        risk_description += "**🚨 해킹 공격 가능성**:\n"
+        
+        # 발견된 취약점별 공격 가능성 분석
+        attack_possibilities = []
+        
+        for vuln in vuln_list:
+            vuln_type = vuln.get('type', '').lower()
+            severity = vuln.get('severity', '')
+            module = vuln.get('module', '')
+            
+            # 취약점 유형별 공격 가능성 설명
+            if 'sql injection' in vuln_type or '인젝션' in vuln_type:
+                attack_possibilities.append(f"• **SQL 인젝션 공격**: {module}에서 데이터베이스 직접 접근 가능")
+            elif 'xss' in vuln_type or '크로스사이트' in vuln_type:
+                attack_possibilities.append(f"• **XSS 공격**: {module}에서 사용자 브라우저에 악성 스크립트 주입 가능")
+            elif 'csrf' in vuln_type or '사이트 간' in vuln_type:
+                attack_possibilities.append(f"• **CSRF 공격**: {module}에서 사용자 권한으로 무단 작업 실행 가능")
+            elif '인증' in vuln_type or '로그인' in vuln_type or 'authentication' in vuln_type:
+                attack_possibilities.append(f"• **인증 우회**: {module}에서 관리자 권한 획득 가능")
+            elif '파일 업로드' in vuln_type or 'upload' in vuln_type:
+                attack_possibilities.append(f"• **악성 파일 업로드**: {module}에서 서버에 악성 프로그램 설치 가능")
+            elif '경로 순회' in vuln_type or 'path traversal' in vuln_type:
+                attack_possibilities.append(f"• **경로 순회 공격**: {module}에서 시스템 파일 무단 접근 가능")
+            elif '정보 노출' in vuln_type or 'information disclosure' in vuln_type:
+                attack_possibilities.append(f"• **정보 노출**: {module}에서 민감한 정보 탈취 가능")
+            elif '설정' in vuln_type or 'configuration' in vuln_type:
+                attack_possibilities.append(f"• **설정 오류**: {module}에서 보안 설정 우회 가능")
+            else:
+                attack_possibilities.append(f"• **{vuln.get('type', '알 수 없는 취약점')}**: {module}에서 공격 가능")
+        
+        # 공격 가능성 목록 추가
+        if attack_possibilities:
+            risk_description += "\n".join(attack_possibilities) + "\n\n"
+        
+        # OWASP Top 10 취약점이 있는 경우 추가 설명
+        if owasp_vuln_count > 0:
+            risk_description += f"**⚠️ OWASP Top 10 취약점 {owasp_vuln_count}개 발견**:\n"
+            risk_description += f"• **즉시 공격 가능**: 인터넷상의 누구나 이 취약점을 악용할 수 있음\n"
+            risk_description += f"• **자동화 도구**: 해커들이 쉽게 구할 수 있는 도구로 공격 가능\n"
+            risk_description += f"• **공격 난이도**: 낮음 (초보 해커도 공격 가능)\n\n"
+        
+        # 다중 취약점 연계 공격 가능성
+        if total_vulns >= 3:
+            risk_description += f"**🔗 연계 공격 시나리오 ({total_vulns}개 취약점)**:\n"
+            risk_description += f"• **1단계**: 첫 번째 취약점으로 시스템 침입\n"
+            risk_description += f"• **2단계**: 두 번째 취약점으로 권한 확장\n"
+            risk_description += f"• **3단계**: 세 번째 취약점으로 데이터 탈취\n"
+            risk_description += f"• **결과**: 시스템 완전 장악 및 대규모 데이터 유출\n\n"
+        elif total_vulns >= 2:
+            risk_description += f"**🔗 연계 공격 가능성 ({total_vulns}개 취약점)**:\n"
+            risk_description += f"• **복합 공격**: 여러 취약점을 조합하여 더 큰 피해 가능\n"
+            risk_description += f"• **공격 효율성**: 단일 취약점보다 높은 성공률\n\n"
+        
+        # 💼 **비즈니스 중단 위험 설명 (가장 가능성 높은 위험 중심)**
+        risk_description += "**💼 비즈니스 중단 위험**:\n"
+        
+        # 취약점별 위험도 점수 계산 (가장 위험한 것 우선)
+        vuln_risk_scores = []
+        
+        for vuln in vuln_list:
+            vuln_type = vuln.get('type', '').lower()
+            severity = vuln.get('severity', '').lower()
+            module = vuln.get('module', '')
+            
+            # 위험도 점수 계산 (높을수록 위험)
+            risk_score = 0
+            
+            # 심각도별 점수
+            if severity in ['높음', 'high', 'critical']:
+                risk_score += 10
+            elif severity in ['중간', 'medium']:
+                risk_score += 5
+            else:
+                risk_score += 2
+            
+            # 취약점 유형별 점수
+            if 'sql injection' in vuln_type or '인젝션' in vuln_type:
+                risk_score += 15  # 가장 위험
+            elif '파일 업로드' in vuln_type or 'upload' in vuln_type:
+                risk_score += 12  # 서버 장악 가능
+            elif '인증' in vuln_type or '로그인' in vuln_type or 'authentication' in vuln_type:
+                risk_score += 10  # 권한 획득
+            elif 'xss' in vuln_type or '크로스사이트' in vuln_type:
+                risk_score += 8   # 사용자 정보 탈취
+            elif 'csrf' in vuln_type or '사이트 간' in vuln_type:
+                risk_score += 7   # 무단 작업 실행
+            elif '경로 순회' in vuln_type or 'path traversal' in vuln_type:
+                risk_score += 6   # 시스템 파일 접근
+            elif '정보 노출' in vuln_type or 'information disclosure' in vuln_type:
+                risk_score += 5   # 정보 유출
+            elif '설정' in vuln_type or 'configuration' in vuln_type:
+                risk_score += 4   # 보안 설정 우회
+            else:
+                risk_score += 3   # 일반적 위험
+            
+            vuln_risk_scores.append((vuln, risk_score))
+        
+        # 위험도 순으로 정렬 (높은 순)
+        vuln_risk_scores.sort(key=lambda x: x[1], reverse=True)
+        
+        # 가장 위험한 취약점 3개만 선택하여 상세 설명
+        top_risks = vuln_risk_scores[:3]
+        
+        if top_risks:
+            risk_description += "**🚨 가장 위험한 비즈니스 중단 시나리오**:\n\n"
+            
+            for i, (vuln, score) in enumerate(top_risks, 1):
+                vuln_type = vuln.get('type', '알 수 없는 취약점')
+                severity = vuln.get('severity', '분석 중')
+                module = vuln.get('module', '전체 시스템')
+                
+                risk_description += f"**{i}. {vuln_type}** (위험도: {score}점, 심각도: {severity})\n"
+                risk_description += f"   - 위치: {module}\n"
+                
+                # 취약점별 구체적인 비즈니스 중단 시나리오
+                if 'sql injection' in vuln_type.lower() or '인젝션' in vuln_type.lower():
+                    risk_description += f"   - **즉시 서비스 중단**: 데이터베이스 파괴로 웹사이트 완전 마비\n"
+                    risk_description += f"   - **고객 정보 100% 유출**: 개인정보, 결제정보 등 모든 데이터 탈취\n"
+                    risk_description += f"   - **복구 불가능**: 백업 데이터까지 손상 가능\n"
+                elif '파일 업로드' in vuln_type.lower() or 'upload' in vuln_type.lower():
+                    risk_description += f"   - **서버 완전 장악**: 악성 프로그램으로 전체 시스템 제어\n"
+                    risk_description += f"   - **고객 접근 차단**: 웹사이트를 랜섬웨어로 암호화\n"
+                    risk_description += f"   - **비즈니스 중단**: 최소 1주일간 서비스 불가\n"
+                elif '인증' in vuln_type.lower() or '로그인' in vuln_type.lower():
+                    risk_description += f"   - **관리자 권한 탈취**: 모든 고객 데이터에 무단 접근\n"
+                    risk_description += f"   - **시스템 설정 변경**: 보안 정책 무력화\n"
+                    risk_description += f"   - **고객 신뢰도 완전 상실**: 브랜드 이미지 파괴\n"
+                elif 'xss' in vuln_type.lower() or '크로스사이트' in vuln_type.lower():
+                    risk_description += f"   - **고객 세션 탈취**: 개인정보 및 로그인 정보 유출\n"
+                    risk_description += f"   - **피싱 공격 유발**: 고객이 악성 사이트로 유도\n"
+                    risk_description += f"   - **고객 이탈**: 서비스 신뢰도 하락으로 고객 유실\n"
+                elif 'csrf' in vuln_type.lower() or '사이트 간' in vuln_type.lower():
+                    risk_description += f"   - **무단 거래 실행**: 고객이 모르는 사이에 원치 않는 작업 수행\n"
+                    risk_description += f"   - **법적 분쟁**: 고객과의 소송 위험\n"
+                    risk_description += f"   - **서비스 신뢰도 하락**: 고객 불만 증가\n"
+                else:
+                    risk_description += f"   - **일반적 보안 위협**: 비즈니스 연속성 저해\n"
+                    risk_description += f"   - **부분적 서비스 장애**: 일부 기능 사용 불가\n"
+                    risk_description += f"   - **고객 불만 증가**: 서비스 품질 저하\n"
+                
+                risk_description += "\n"
+        
+        # 💰 **비즈니스 영향도 (발견된 취약점 기반 동적 분석)**
+        risk_description += f"**💰 비즈니스 영향도 분석 (총 위험도: {total_risk_score}점)**:\n\n"
+        
+        # 발견된 취약점별 구체적인 비즈니스 영향 계산
+        business_impacts = {
+            'service_disruption': 0,  # 서비스 중단
+            'data_breach': 0,         # 데이터 유출
+            'financial_loss': 0,      # 금융 손실
+            'legal_liability': 0,     # 법적 책임
+            'reputation_damage': 0,   # 평판 손상
+            'customer_loss': 0        # 고객 이탈
+        }
+        
+        # 각 취약점별 비즈니스 영향 점수 계산
+        for vuln, score in vuln_risk_scores:
+            vuln_type = vuln.get('type', '').lower()
+            module = vuln.get('module', '')
+            
+            # SQL 인젝션: 데이터베이스 침해로 인한 최대 피해
+            if 'sql injection' in vuln_type or '인젝션' in vuln_type:
+                business_impacts['service_disruption'] += 10  # 즉시 서비스 중단
+                business_impacts['data_breach'] += 15        # 모든 데이터 유출
+                business_impacts['financial_loss'] += 12     # 대규모 금융 손실
+                business_impacts['legal_liability'] += 10    # 개인정보보호법 위반
+                business_impacts['reputation_damage'] += 8   # 브랜드 파괴
+                business_impacts['customer_loss'] += 10      # 고객 완전 이탈
+                
+            # 파일 업로드: 서버 장악으로 인한 피해
+            elif '파일 업로드' in vuln_type or 'upload' in vuln_type:
+                business_impacts['service_disruption'] += 12  # 서버 완전 장악
+                business_impacts['data_breach'] += 10        # 서버 데이터 유출
+                business_impacts['financial_loss'] += 15     # 랜섬웨어 요구
+                business_impacts['legal_liability'] += 8     # 시스템 장악
+                business_impacts['reputation_damage'] += 10  # 완전한 신뢰도 상실
+                business_impacts['customer_loss'] += 12      # 고객 대량 이탈
+                
+            # 인증 우회: 관리자 권한 탈취
+            elif '인증' in vuln_type or '로그인' in vuln_type or 'authentication' in vuln_type:
+                business_impacts['service_disruption'] += 8   # 시스템 설정 변경
+                business_impacts['data_breach'] += 12        # 모든 데이터 접근
+                business_impacts['financial_loss'] += 10     # 무단 거래 실행
+                business_impacts['legal_liability'] += 12    # 관리자 권한 악용
+                business_impacts['reputation_damage'] += 10  # 브랜드 이미지 파괴
+                business_impacts['customer_loss'] += 10      # 고객 신뢰도 상실
+                
+            # XSS: 사용자 정보 탈취
+            elif 'xss' in vuln_type or '크로스사이트' in vuln_type:
+                business_impacts['service_disruption'] += 3   # 부분적 서비스 장애
+                business_impacts['data_breach'] += 8         # 사용자 개인정보 유출
+                business_impacts['financial_loss'] += 6      # 고객 피해 보상
+                business_impacts['legal_liability'] += 8     # 개인정보 유출
+                business_impacts['reputation_damage'] += 6   # 서비스 신뢰도 하락
+                business_impacts['customer_loss'] += 8       # 고객 이탈
+                
+            # CSRF: 무단 작업 실행
+            elif 'csrf' in vuln_type or '사이트 간' in vuln_type:
+                business_impacts['service_disruption'] += 2   # 기능 오작동
+                business_impacts['data_breach'] += 5         # 제한적 정보 유출
+                business_impacts['financial_loss'] += 8      # 무단 거래로 인한 손실
+                business_impacts['legal_liability'] += 6     # 무단 작업 실행
+                business_impacts['reputation_damage'] += 5   # 서비스 신뢰도 하락
+                business_impacts['customer_loss'] += 6       # 고객 불만 증가
+                
+            # 기타 취약점
+            else:
+                business_impacts['service_disruption'] += 2
+                business_impacts['data_breach'] += 3
+                business_impacts['financial_loss'] += 3
+                business_impacts['legal_liability'] += 3
+                business_impacts['reputation_damage'] += 3
+                business_impacts['customer_loss'] += 3
+        
+        # 비즈니스 영향도 등급 결정
+        max_impact = max(business_impacts.values())
+        
+        if max_impact >= 40:
+            risk_description += f"**💀 극도로 위험한 비즈니스 영향**:\n"
+            risk_description += f"• **서비스 중단**: {business_impacts['service_disruption']}점 - 즉시 웹사이트 마비\n"
+            risk_description += f"• **데이터 유출**: {business_impacts['data_breach']}점 - 고객 정보 100% 노출\n"
+            risk_description += f"• **금융 손실**: {business_impacts['financial_loss']}점 - 최대 3억원 손실 예상\n"
+            risk_description += f"• **법적 책임**: {business_impacts['legal_liability']}점 - 개인정보보호법 위반 과태료\n"
+            risk_description += f"• **평판 손상**: {business_impacts['reputation_damage']}점 - 브랜드 완전 파괴\n"
+            risk_description += f"• **고객 이탈**: {business_impacts['customer_loss']}점 - 고객 100% 이탈\n\n"
+            
+        elif max_impact >= 25:
+            risk_description += f"**🚨 매우 위험한 비즈니스 영향**:\n"
+            risk_description += f"• **서비스 장애**: {business_impacts['service_disruption']}점 - 일부 기능 마비\n"
+            risk_description += f"• **데이터 유출**: {business_impacts['data_breach']}점 - 대부분 고객 정보 노출\n"
+            risk_description += f"• **금융 손실**: {business_impacts['financial_loss']}점 - 최대 1억원 손실 예상\n"
+            risk_description += f"• **법적 책임**: {business_impacts['legal_liability']}점 - 관련 법규 위반\n"
+            risk_description += f"• **평판 손상**: {business_impacts['reputation_damage']}점 - 브랜드 심각한 손상\n"
+            risk_description += f"• **고객 이탈**: {business_impacts['customer_loss']}점 - 고객 50-80% 이탈\n\n"
+            
+        elif max_impact >= 15:
+            risk_description += f"**⚠️ 위험한 비즈니스 영향**:\n"
+            risk_description += f"• **서비스 장애**: {business_impacts['service_disruption']}점 - 부분적 기능 오작동\n"
+            risk_description += f"• **데이터 유출**: {business_impacts['data_breach']}점 - 일부 정보 노출 위험\n"
+            risk_description += f"• **금융 손실**: {business_impacts['financial_loss']}점 - 최대 3천만원 손실 예상\n"
+            risk_description += f"• **법적 책임**: {business_impacts['legal_liability']}점 - 규제 위반 가능성\n"
+            risk_description += f"• **평판 손상**: {business_impacts['reputation_damage']}점 - 서비스 신뢰도 하락\n"
+            risk_description += f"• **고객 이탈**: {business_impacts['customer_loss']}점 - 고객 10-30% 이탈\n\n"
+            
+        else:
+            risk_description += f"**🟢 낮은 비즈니스 영향**:\n"
+            risk_description += f"• **서비스 영향**: {business_impacts['service_disruption']}점 - 미미한 영향\n"
+            risk_description += f"• **데이터 보호**: {business_impacts['data_breach']}점 - 안전함\n"
+            risk_description += f"• **금융 안정**: {business_impacts['financial_loss']}점 - 직접적 손실 없음\n"
+            risk_description += f"• **법적 안전**: {business_impacts['legal_liability']}점 - 규제 준수\n"
+            risk_description += f"• **평판 유지**: {business_impacts['reputation_damage']}점 - 브랜드 안전\n"
+            risk_description += f"• **고객 유지**: {business_impacts['customer_loss']}점 - 고객 이탈 없음\n\n"
+        
+        # 구체적인 피해 예상 금액
+        total_financial_impact = business_impacts['financial_loss'] * 1000000  # 백만원 단위
+        risk_description += f"**💰 예상 피해 금액**: 약 {total_financial_impact:,}원\n"
+        risk_description += f"**📊 영향 지속 기간**: {max(1, total_risk_score // 10)}개월\n"
+        risk_description += f"**🎯 복구 필요 기간**: {max(3, total_risk_score // 5)}개월\n\n"
+        
+        # 🎯 **해커 입장에서 본 실제 해킹 시나리오**
+        risk_description += "**🎯 해커 입장에서 본 실제 해킹 시나리오**:\n"
+        
+        # 해커가 실제로 할 수 있는 단계별 공격 시나리오
+        if total_vulns >= 3:
+            risk_description += f"**🔴 해커의 완벽한 침입 시나리오 ({total_vulns}개 취약점 활용)**:\n\n"
+            
+            # 1단계: 초기 침입
+            first_vuln = vuln_list[0]
+            first_type = first_vuln.get('type', '알 수 없는 취약점')
+            first_module = first_vuln.get('module', '시스템')
+            
+            risk_description += f"**1단계: 초기 침입**\n"
+            if 'sql injection' in first_type.lower() or '인젝션' in first_type.lower():
+                risk_description += f"• 해커가 {first_module}에서 SQL 인젝션을 이용해 데이터베이스에 직접 접근\n"
+                risk_description += f"• 고객 정보, 관리자 계정, 비밀번호 해시 등을 모두 탈취\n"
+            elif '파일 업로드' in first_type.lower() or 'upload' in first_type.lower():
+                risk_description += f"• 해커가 {first_module}에서 악성 파일을 업로드하여 서버에 웹쉘 설치\n"
+                risk_description += f"• 서버에 원격 접근 권한을 획득\n"
+            elif '인증' in first_type.lower() or '로그인' in first_type.lower():
+                risk_description += f"• 해커가 {first_module}에서 인증 우회를 통해 관리자 계정으로 로그인\n"
+                risk_description += f"• 시스템의 모든 권한을 획득\n"
+            else:
+                risk_description += f"• 해커가 {first_module}에서 {first_type} 취약점을 이용해 시스템에 침입\n"
+                risk_description += f"• 초기 접근 권한을 획득\n"
+            
+            # 2단계: 권한 확장
+            if len(vuln_list) >= 2:
+                second_vuln = vuln_list[1]
+                second_type = second_vuln.get('type', '알 수 없는 취약점')
+                second_module = second_vuln.get('module', '시스템')
+                
+                risk_description += f"\n**2단계: 권한 확장**\n"
+                if 'xss' in second_type.lower() or '크로스사이트' in second_type.lower():
+                    risk_description += f"• 해커가 {second_module}에서 XSS를 이용해 관리자 세션을 탈취\n"
+                    risk_description += f"• 관리자 권한으로 시스템 전체에 접근 가능\n"
+                elif '경로 순회' in second_type.lower() or 'path traversal' in second_type.lower():
+                    risk_description += f"• 해커가 {second_module}에서 경로 순회를 이용해 시스템 파일에 접근\n"
+                    risk_description += f"• 설정 파일, 로그 파일 등을 탈취하여 더 많은 정보 수집\n"
+                elif '정보 노출' in second_type.lower():
+                    risk_description += f"• 해커가 {second_module}에서 노출된 정보를 이용해 시스템 구조 파악\n"
+                    risk_description += f"• 다음 공격을 위한 정보를 수집\n"
+                else:
+                    risk_description += f"• 해커가 {second_module}에서 {second_type} 취약점을 이용해 권한을 확장\n"
+                    risk_description += f"• 더 높은 권한을 획득\n"
+            
+            # 3단계: 데이터 탈취
+            if len(vuln_list) >= 3:
+                third_vuln = vuln_list[2]
+                third_type = third_vuln.get('type', '알 수 없는 취약점')
+                third_module = third_vuln.get('module', '시스템')
+                
+                risk_description += f"\n**3단계: 데이터 탈취**\n"
+                if 'csrf' in third_type.lower() or '사이트 간' in third_type.lower():
+                    risk_description += f"• 해커가 {third_module}에서 CSRF를 이용해 고객 계정으로 무단 거래 실행\n"
+                    risk_description += f"• 고객의 돈을 해커 계좌로 이체\n"
+                elif '설정' in third_type.lower() or 'configuration' in third_type.lower():
+                    risk_description += f"• 해커가 {third_module}에서 설정 오류를 이용해 보안 정책 무력화\n"
+                    risk_description += f"• 백도어를 설치하여 지속적인 접근 확보\n"
+                else:
+                    risk_description += f"• 해커가 {third_module}에서 {third_type} 취약점을 이용해 최종 데이터 탈취\n"
+                    risk_description += f"• 모든 고객 정보와 비즈니스 데이터를 외부로 유출\n"
+            
+            # 결과
+            risk_description += f"\n**💀 최종 결과**\n"
+            risk_description += f"• **시스템 완전 장악**: 해커가 웹사이트를 완전히 제어\n"
+            risk_description += f"• **고객 정보 100% 유출**: 개인정보, 결제정보, 비즈니스 데이터 모두 탈취\n"
+            risk_description += f"• **서비스 중단**: 웹사이트를 랜섬웨어로 암호화하여 접근 차단\n"
+            risk_description += f"• **고객 피해**: 고객들의 개인정보가 다크웹에 판매됨\n"
+            risk_description += f"• **회사 파산**: 법적 책임과 고객 이탈로 인한 비즈니스 파괴\n\n"
+            
+        elif total_vulns >= 2:
+            risk_description += f"**🟠 해커의 부분적 침입 시나리오 ({total_vulns}개 취약점 활용)**:\n\n"
+            
+            # 2개 취약점 시나리오
+            first_vuln = vuln_list[0]
+            second_vuln = vuln_list[1]
+            
+            risk_description += f"**1단계: {first_vuln.get('type', '취약점')}을 이용한 침입**\n"
+            risk_description += f"• 해커가 {first_vuln.get('module', '시스템')}에서 {first_vuln.get('type', '취약점')} 발견\n"
+            risk_description += f"• 자동화 도구를 이용해 쉽게 시스템에 침입\n\n"
+            
+            risk_description += f"**2단계: {second_vuln.get('type', '취약점')}을 이용한 확장**\n"
+            risk_description += f"• 해커가 {second_vuln.get('module', '시스템')}에서 {second_vuln.get('type', '취약점')} 발견\n"
+            risk_description += f"• 첫 번째 취약점과 연계하여 더 큰 피해 발생\n\n"
+            
+            risk_description += f"**⚠️ 예상 결과**\n"
+            risk_description += f"• **부분적 데이터 유출**: 일부 고객 정보가 탈취됨\n"
+            risk_description += f"• **서비스 장애**: 일부 기능이 정상 작동하지 않음\n"
+            risk_description += f"• **고객 불만**: 서비스 품질 저하로 고객 이탈\n\n"
+            
+        else:
+            # 단일 취약점 시나리오
+            single_vuln = vuln_list[0]
+            vuln_type = single_vuln.get('type', '알 수 없는 취약점')
+            module = single_vuln.get('module', '시스템')
+            
+            risk_description += f"**🟡 해커의 단일 취약점 공격 시나리오**:\n\n"
+            risk_description += f"**해커의 공격 과정**\n"
+            risk_description += f"• 해커가 {module}에서 {vuln_type} 취약점을 발견\n"
+            risk_description += f"• 인터넷에서 쉽게 구할 수 있는 공격 도구를 다운로드\n"
+            risk_description += f"• 몇 분 만에 자동화된 공격을 실행\n"
+            risk_description += f"• 취약점을 성공적으로 악용하여 시스템에 침입\n\n"
+            
+            risk_description += f"**⚠️ 예상 결과**\n"
+            risk_description += f"• **제한적 피해**: 단일 취약점으로 인한 제한적 영향\n"
+            risk_description += f"• **조기 발견 가능**: 빠른 대응으로 피해 최소화 가능\n"
+            risk_description += f"• **학습 기회**: 보안 강화를 위한 교훈 제공\n\n"
         
         risk_description += "\n"
         
@@ -307,53 +684,153 @@ def generate_final_report(
         report += f"**위험성 평가**: {risk_description}\n\n"
         report += f"**비즈니스 영향도**: {business_impact}\n\n"
         
-        # 위험성 등급에 따른 APT 공격 연계 위험도
+        # 📊 **APT 공격 연계 위험도 (발견된 취약점 기반 동적 분석)**
         report += "**📊 APT 공격 연계 위험도**: "
-        if owasp_vuln_count >= 3:
-            report += "**극도로 높음** - OWASP Top 10 취약점 다수 존재로 완전한 시스템 장악 및 단계별 침투 가능\n"
-        elif owasp_vuln_count >= 1:
-            report += "**매우 높음** - OWASP Top 10 취약점 존재로 핵심 시스템 침투 및 데이터 유출 위험\n"
-        elif total_vulns >= 2:
-            report += "**높음** - 다중 취약점으로 인한 복합적 공격 시나리오 구성 가능\n"
+        
+        # 발견된 취약점별 APT 공격 가능성 분석
+        apt_attack_score = 0
+        apt_attack_vectors = []
+        
+        for vuln in vuln_list:
+            vuln_type = vuln.get('type', '').lower()
+            severity = vuln.get('severity', '').lower()
+            module = vuln.get('module', '')
+            
+            # APT 공격 벡터별 점수 계산
+            if 'sql injection' in vuln_type or '인젝션' in vuln_type:
+                apt_attack_score += 15  # 데이터베이스 직접 접근
+                apt_attack_vectors.append(f"SQL 인젝션({module})")
+            elif '파일 업로드' in vuln_type or 'upload' in vuln_type:
+                apt_attack_score += 12  # 웹쉘 설치 가능
+                apt_attack_vectors.append(f"파일 업로드({module})")
+            elif '인증' in vuln_type or '로그인' in vuln_type or 'authentication' in vuln_type:
+                apt_attack_score += 10  # 권한 획득
+                apt_attack_vectors.append(f"인증 우회({module})")
+            elif 'xss' in vuln_type or '크로스사이트' in vuln_type:
+                apt_attack_score += 8   # 세션 탈취
+                apt_attack_vectors.append(f"XSS({module})")
+            elif '경로 순회' in vuln_type or 'path traversal' in vuln_type:
+                apt_attack_score += 7   # 시스템 파일 접근
+                apt_attack_vectors.append(f"경로 순회({module})")
+            elif '정보 노출' in vuln_type or 'information disclosure' in vuln_type:
+                apt_attack_score += 6   # 정보 수집
+                apt_attack_vectors.append(f"정보 노출({module})")
+            elif 'csrf' in vuln_type or '사이트 간' in vuln_type:
+                apt_attack_score += 5   # 무단 작업 실행
+                apt_attack_vectors.append(f"CSRF({module})")
+            elif '설정' in vuln_type or 'configuration' in vuln_type:
+                apt_attack_score += 4   # 보안 설정 우회
+                apt_attack_vectors.append(f"설정 오류({module})")
+            else:
+                apt_attack_score += 3   # 일반적 취약점
+                apt_attack_vectors.append(f"{vuln.get('type', '알 수 없는 취약점')}({module})")
+        
+        # APT 공격 위험도 등급 결정
+        if apt_attack_score >= 30:
+            report += f"**💀 극도로 높음 ({apt_attack_score}점)** - 발견된 취약점들로 완전한 시스템 장악 및 단계별 침투 가능\n"
+            report += f"**🔍 주요 공격 벡터**: {', '.join(apt_attack_vectors[:3])}\n"
+        elif apt_attack_score >= 20:
+            report += f"**🚨 매우 높음 ({apt_attack_score}점)** - 핵심 시스템 침투 및 데이터 유출 위험\n"
+            report += f"**🔍 주요 공격 벡터**: {', '.join(apt_attack_vectors[:3])}\n"
+        elif apt_attack_score >= 10:
+            report += f"**⚠️ 높음 ({apt_attack_score}점)** - 다중 취약점으로 인한 복합적 공격 시나리오 구성 가능\n"
+            report += f"**🔍 주요 공격 벡터**: {', '.join(apt_attack_vectors[:2])}\n"
         else:
-            report += "**중간** - 제한적이지만 연계 공격 가능성 존재\n"
+            report += f"**🟡 중간 ({apt_attack_score}점)** - 제한적이지만 연계 공격 가능성 존재\n"
+            report += f"**🔍 발견된 취약점**: {', '.join(apt_attack_vectors)}\n"
         
         report += "\n---\n\n"
         
-        # 2. APT 공격 단계별 시나리오 예시
-        report += "### 2️⃣ APT 공격 단계별 시나리오 예시\n\n"
-        report += "> 💡 **현재 발견된 웹 취약점들을 활용한 APT(Advanced Persistent Threat) 공격 시나리오 예시입니다.**\n\n"
+        # 2. APT 공격 단계별 시나리오 (발견된 취약점 기반)
+        report += "### 2️⃣ APT 공격 단계별 시나리오 (발견된 취약점 활용)\n\n"
+        report += "> 💡 **현재 발견된 웹 취약점들을 활용한 APT(Advanced Persistent Threat) 공격 시나리오입니다.**\n\n"
         
-        report += "**📋 공격 단계별 시나리오 예시**\n\n"
+        report += "**📋 발견된 취약점 기반 공격 시나리오**\n\n"
         
-        # 1단계: 정찰 및 정보 수집 예시
+        # 발견된 취약점들을 단계별로 분류
+        recon_vulns = []      # 정찰용 취약점
+        access_vulns = []     # 초기 침투용 취약점
+        escalation_vulns = [] # 권한 확장용 취약점
+        movement_vulns = []   # 내부 이동용 취약점
+        exfil_vulns = []      # 데이터 유출용 취약점
+        persistence_vulns = [] # 지속성 확보용 취약점
+        
+        for vuln in vuln_list:
+            vuln_type = vuln.get('type', '').lower()
+            module = vuln.get('module', '')
+            
+            # 취약점 유형별 단계 분류
+            if '정보 노출' in vuln_type or 'information disclosure' in vuln_type:
+                recon_vulns.append(f"{vuln_type}({module})")
+            elif 'sql injection' in vuln_type or '인젝션' in vuln_type:
+                access_vulns.append(f"{vuln_type}({module})")
+            elif '파일 업로드' in vuln_type or 'upload' in vuln_type:
+                escalation_vulns.append(f"{vuln_type}({module})")
+            elif 'xss' in vuln_type or '크로스사이트' in vuln_type:
+                movement_vulns.append(f"{vuln_type}({module})")
+            elif '경로 순회' in vuln_type or 'path traversal' in vuln_type:
+                exfil_vulns.append(f"{vuln_type}({module})")
+            elif '인증' in vuln_type or '로그인' in vuln_type or 'authentication' in vuln_type:
+                persistence_vulns.append(f"{vuln_type}({module})")
+            elif 'csrf' in vuln_type or '사이트 간' in vuln_type:
+                exfil_vulns.append(f"{vuln_type}({module})")
+            elif '설정' in vuln_type or 'configuration' in vuln_type:
+                persistence_vulns.append(f"{vuln_type}({module})")
+            else:
+                # 일반적 취약점은 적절한 단계에 배치
+                if not access_vulns:
+                    access_vulns.append(f"{vuln_type}({module})")
+                elif not escalation_vulns:
+                    escalation_vulns.append(f"{vuln_type}({module})")
+                else:
+                    movement_vulns.append(f"{vuln_type}({module})")
+        
+        # 1단계: 정찰 및 정보 수집
         report += "**1단계: 정찰 및 정보 수집 (Reconnaissance & Intelligence Gathering)**\n"
-        report += "공격자는 웹 애플리케이션의 정보 노출 취약점을 통해 서버 구조, 데이터베이스 스키마, API 엔드포인트, 내부 네트워크 토폴로지 등 핵심 정보를 수집합니다. "
+        if recon_vulns:
+            report += f"공격자는 {', '.join(recon_vulns)} 취약점을 통해 서버 구조, 데이터베이스 스키마, API 엔드포인트, 내부 네트워크 토폴로지 등 핵심 정보를 수집합니다. "
+        else:
+            report += "공격자는 웹 애플리케이션의 일반적인 정보 노출 취약점을 통해 서버 구조, 데이터베이스 스키마, API 엔드포인트, 내부 네트워크 토폴로지 등 핵심 정보를 수집합니다. "
         report += "에러 메시지와 디버그 정보를 통해 기술 스택, 버전 정보, 내부 경로 등을 파악하여 공격 벡터를 선정합니다.\n\n"
         
-        # 2단계: 초기 침투 예시
+        # 2단계: 초기 침투
         report += "**2단계: 초기 침투 (Initial Access)**\n"
-        report += "수집된 정보를 바탕으로 SQL Injection 취약점을 악용하여 관리자 계정에 무단 접근합니다. "
-        report += "SQL 인젝션을 통한 인증 우회, 세션 하이재킹, 권한 상승 등을 통해 내부 시스템에 첫 발을 내딛습니다.\n\n"
+        if access_vulns:
+            report += f"수집된 정보를 바탕으로 {', '.join(access_vulns)} 취약점을 악용하여 관리자 계정에 무단 접근합니다. "
+        else:
+            report += "수집된 정보를 바탕으로 SQL Injection 취약점을 악용하여 관리자 계정에 무단 접근합니다. "
+        report += "인증 우회, 세션 하이재킹, 권한 상승 등을 통해 내부 시스템에 첫 발을 내딛습니다.\n\n"
         
-        # 3단계: 권한 확장 예시
+        # 3단계: 권한 확장
         report += "**3단계: 권한 확장 (Privilege Escalation)**\n"
-        report += "획득한 권한을 활용해 파일 업로드 취약점을 통해 웹 셸(WebShell)을 서버에 업로드합니다. "
+        if escalation_vulns:
+            report += f"획득한 권한을 활용해 {', '.join(escalation_vulns)} 취약점을 통해 웹 셸(WebShell)을 서버에 업로드합니다. "
+        else:
+            report += "획득한 권한을 활용해 파일 업로드 취약점을 통해 웹 셸(WebShell)을 서버에 업로드합니다. "
         report += "파일 업로드 검증 우회, 경로 순회 취약점을 악용하여 원격 코드 실행(RCE) 권한을 확보하고, 내부 네트워크로의 이동 통로를 구축합니다.\n\n"
         
-        # 4단계: 내부 정찰 및 이동 예시
+        # 4단계: 내부 정찰 및 이동
         report += "**4단계: 내부 정찰 및 이동 (Internal Reconnaissance & Lateral Movement)**\n"
-        report += "내부 네트워크에서 XSS 취약점을 활용하여 관리자 세션을 탈취하고, 내부 시스템 간 자유로운 이동을 수행합니다. "
-        report += "XSS를 통한 세션 쿠키 탈취, 내부 로그 분석, 데이터베이스 접근 권한 획득을 통해 핵심 자산에 접근합니다.\n\n"
+        if movement_vulns:
+            report += f"내부 네트워크에서 {', '.join(movement_vulns)} 취약점을 활용하여 관리자 세션을 탈취하고, 내부 시스템 간 자유로운 이동을 수행합니다. "
+        else:
+            report += "내부 네트워크에서 XSS 취약점을 활용하여 관리자 세션을 탈취하고, 내부 시스템 간 자유로운 이동을 수행합니다. "
+        report += "세션 쿠키 탈취, 내부 로그 분석, 데이터베이스 접근 권한 획득을 통해 핵심 자산에 접근합니다.\n\n"
         
-        # 5단계: 데이터 수집 및 유출 예시
+        # 5단계: 데이터 수집 및 유출
         report += "**5단계: 데이터 수집 및 유출 (Data Collection & Exfiltration)**\n"
-        report += "핵심 데이터베이스에 접근하여 고객 정보, 금융 데이터, 지적재산권, 비즈니스 기밀 등을 대량으로 수집합니다. "
+        if exfil_vulns:
+            report += f"핵심 데이터베이스에 접근하여 {', '.join(exfil_vulns)} 취약점을 통해 고객 정보, 금융 데이터, 지적재산권, 비즈니스 기밀 등을 대량으로 수집합니다. "
+        else:
+            report += "핵심 데이터베이스에 접근하여 고객 정보, 금융 데이터, 지적재산권, 비즈니스 기밀 등을 대량으로 수집합니다. "
         report += "데이터를 암호화하여 C&C(Command & Control) 서버로 유출하고, 증거 인멸을 위한 로그 삭제 작업을 수행합니다.\n\n"
         
-        # 6단계: 지속성 확보 및 피해 확산 예시
+        # 6단계: 지속성 확보 및 피해 확산
         report += "**6단계: 지속성 확보 및 피해 확산 (Persistence & Impact)**\n"
-        report += "백도어와 루트킷을 설치하여 지속적인 접근을 확보하고, 랜섬웨어를 배포하여 시스템을 완전히 마비시킵니다. "
+        if persistence_vulns:
+            report += f"백도어와 루트킷을 설치하여 {', '.join(persistence_vulns)} 취약점을 통해 지속적인 접근을 확보하고, 랜섬웨어를 배포하여 시스템을 완전히 마비시킵니다. "
+        else:
+            report += "백도어와 루트킷을 설치하여 지속적인 접근을 확보하고, 랜섬웨어를 배포하여 시스템을 완전히 마비시킵니다. "
         report += "이를 통해 조직의 운영 중단, 평판 손상, 법적 책임, 고객 신뢰도 하락 등 다차원적 피해를 야기합니다.\n\n"
         
         report += "\n---\n\n"

@@ -153,15 +153,15 @@ def generate_final_report(
         # 위험성 등급 결정 (OWASP Top 10 기준)
         if owasp_vuln_count >= 3:
             risk_level = "🔴 **극도로 위험 (Critical Risk)**"
-        elif owasp_vuln_count >= 1:
+        elif owasp_vuln_count >= 2:
             risk_level = "🟠 **매우 위험 (High Risk)**"
         elif total_vulns >= 2:
             risk_level = "🟡 **위험 (Medium Risk)**"
         else:
             risk_level = "🟢 **낮은 위험 (Low Risk)**"
         
-        # 진단된 취약점을 동적으로 분석한 해킹 위험성 평가
-        risk_description = f"총 {total_vulns}개의 취약점이 발견되어 복합적 해킹 공격 위험이 존재합니다. "
+        # 🎯 **비즈니스 관점에서 이해하기 쉬운 위험성 평가**
+        risk_description = f"**📊 발견된 취약점 현황**: 총 {total_vulns}개의 보안 취약점이 발견되었습니다.\n\n"
         
         # 이미지에서 읽어온 위험성 정보 우선 활용
         risk_assessments = []
@@ -171,62 +171,114 @@ def generate_final_report(
                 risk_assessments.append(risk)
         
         if risk_assessments:
-            # 이미지에서 읽어온 위험성 정보를 기반으로 동적 분석
-            risk_description += f"발견된 취약점들의 위험성: {risk_assessments[0]} "
+            risk_description += f"**🔍 전문가 분석**: {risk_assessments[0]}\n\n"
         
-        # OWASP Top 10 기준 동적 위험성 분석
+        # 🚨 **해킹 가능성 설명 (비즈니스 관점)**
+        risk_description += "**🚨 해킹 공격 가능성**:\n"
         if owasp_vuln_count > 0:
-            risk_description += f"OWASP Top 10 취약점 {owasp_vuln_count}개({', '.join(owasp_vulns)})가 발견되어 즉시적인 보안 대응이 필요합니다. "
+            risk_description += f"• **즉시 공격 가능**: OWASP Top 10 취약점 {owasp_vuln_count}개 발견\n"
+            risk_description += f"• **공격자 입장**: 인터넷상의 누구나 이 취약점을 악용할 수 있음\n"
+            risk_description += f"• **공격 도구**: 해커들이 쉽게 구할 수 있는 자동화 도구로 공격 가능\n\n"
         
         if total_vulns >= 3:
-            risk_description += f"다중 취약점({total_vulns}개)으로 인한 연계 공격 시나리오가 구성 가능합니다. "
+            risk_description += f"• **연계 공격 위험**: {total_vulns}개 취약점이 서로 연결되어 더 큰 피해 가능\n"
+            risk_description += f"• **공격 시나리오**: 첫 번째 취약점으로 침입 → 두 번째 취약점으로 권한 확장 → 세 번째 취약점으로 데이터 탈취\n\n"
         
-        # 실제 발견된 취약점 유형별 동적 분석
+        # 💼 **비즈니스 중단 위험 설명**
+        risk_description += "**💼 비즈니스 중단 위험**:\n"
+        if owasp_vuln_count >= 2:
+            risk_description += "• **서비스 중단**: 웹사이트가 해킹되어 고객 접근 불가\n"
+            risk_description += "• **데이터 유출**: 고객 정보, 비즈니스 기밀 등이 외부로 노출\n"
+            risk_description += "• **신뢰도 하락**: 고객과 파트너사의 신뢰 상실\n"
+            risk_description += "• **법적 책임**: 개인정보보호법 위반으로 인한 과태료 및 손해배상\n"
+            risk_description += "• **매출 감소**: 서비스 중단 및 브랜드 이미지 손상으로 인한 매출 하락\n\n"
+        elif total_vulns >= 2:
+            risk_description += "• **부분적 서비스 장애**: 일부 기능이 해킹으로 인해 정상 작동하지 않음\n"
+            risk_description += "• **제한적 데이터 노출**: 일부 정보가 외부로 유출될 위험\n"
+            risk_description += "• **고객 불만 증가**: 서비스 품질 저하로 인한 고객 이탈\n\n"
+        
+        # 🎯 **실제 사례 기반 설명**
+        risk_description += "**🎯 실제 발생 가능한 시나리오**:\n"
         found_vuln_types = []
         for vuln in vuln_list:
             vuln_type = vuln.get('type', '')
             if vuln_type and vuln_type not in found_vuln_types:
                 found_vuln_types.append(vuln_type)
         
-        if found_vuln_types:
-            risk_description += f"발견된 주요 취약점 유형: {', '.join(found_vuln_types)}. "
+        if 'SQL Injection' in found_vuln_types or '인젝션' in str(found_vuln_types):
+            risk_description += "• **SQL 인젝션**: 해커가 데이터베이스에 직접 접근하여 고객 정보를 대량으로 탈취\n"
+        if 'XSS' in str(found_vuln_types) or '크로스사이트' in str(found_vuln_types):
+            risk_description += "• **XSS 공격**: 고객 브라우저에 악성 스크립트를 심어 개인정보를 빼돌림\n"
+        if '인증' in str(found_vuln_types) or '로그인' in str(found_vuln_types):
+            risk_description += "• **인증 우회**: 해커가 관리자 권한으로 시스템에 침입하여 모든 데이터에 접근\n"
+        if '파일 업로드' in str(found_vuln_types) or '업로드' in str(found_vuln_types):
+            risk_description += "• **악성 파일 업로드**: 해커가 악성 프로그램을 업로드하여 서버를 완전 장악\n"
         
-        # 취약점 조합 가능성 분석 (동적)
-        if len(found_vuln_types) >= 2:
-            risk_description += f"이러한 취약점들이 연계되어 사용될 경우 더욱 심각한 보안 위협이 될 수 있습니다."
+        risk_description += "\n"
         
-        # 위험성 등급에 따른 비즈니스 영향도
+        # 💰 **비즈니스 영향도 (구체적 피해 규모)**
         if owasp_vuln_count >= 3:
-            business_impact = "조직의 핵심 비즈니스에 치명적인 위협이 될 수 있으며, 시스템 완전 장악 및 대규모 데이터 유출 위험이 있습니다."
-        elif owasp_vuln_count >= 1:
-            business_impact = "조직의 안정성에 심각한 영향을 줄 수 있으며, 핵심 데이터 유출 및 서비스 중단 위험이 있습니다."
+            business_impact = f"""
+**💰 예상 피해 규모 (극도로 위험)**:
+• **즉시 대응 필요**: 24시간 내 해킹 공격 가능성 매우 높음
+• **서비스 중단**: 최대 1주일간 웹사이트 접근 불가
+• **데이터 유출**: 고객 정보 100% 노출 위험
+• **법적 책임**: 개인정보보호법 위반으로 최대 3억원 과태료
+• **매출 손실**: 월 매출의 50-80% 감소 예상
+• **브랜드 손상**: 고객 신뢰도 회복에 최소 6개월 소요
+• **복구 비용**: 시스템 재구축 및 보안 강화에 5천만원 이상"""
+        elif owasp_vuln_count >= 2:
+            business_impact = f"""
+**💰 예상 피해 규모 (매우 위험)**:
+• **단기 대응 필요**: 1주일 내 해킹 공격 가능성 높음
+• **서비스 장애**: 최대 3일간 일부 기능 사용 불가
+• **데이터 유출**: 고객 정보 일부 노출 위험
+• **법적 책임**: 개인정보보호법 위반으로 최대 1억원 과태료
+• **매출 손실**: 월 매출의 20-40% 감소 예상
+• **고객 이탈**: 기존 고객의 10-20% 이탈 가능성
+• **복구 비용**: 보안 강화 및 시스템 수정에 2천만원 이상"""
         elif total_vulns >= 2:
-            business_impact = "조직의 안정성에 영향을 줄 수 있는 위험이 있으며, 제한적 데이터 유출 가능성이 있습니다."
+            business_impact = f"""
+**💰 예상 피해 규모 (위험)**:
+• **중기 대응 필요**: 1개월 내 해킹 공격 가능성 있음
+• **부분적 장애**: 일부 기능이 간헐적으로 오작동
+• **제한적 노출**: 일부 비즈니스 정보 유출 위험
+• **규제 위반**: 관련 법규 위반으로 최대 3천만원 과태료
+• **매출 영향**: 월 매출의 5-15% 감소 예상
+• **고객 불만**: 서비스 품질 저하로 고객 만족도 하락
+• **개선 비용**: 보안 취약점 수정에 5백만원 이상"""
         else:
-            business_impact = "조직의 안정성에 미미한 영향을 줄 수 있으며, 즉시적인 위협은 낮습니다."
+            business_impact = f"""
+**💰 예상 피해 규모 (낮은 위험)**:
+• **정기적 점검**: 3개월 내 보안 점검 권장
+• **미미한 영향**: 현재 비즈니스 운영에 직접적 영향 없음
+• **예방적 조치**: 향후 보안 강화를 위한 개선 권장
+• **최소 비용**: 보안 개선에 1백만원 이하 예상"""
         
         report += f"**위험성 등급**: {risk_level}\n\n"
         report += f"**위험성 등급 분류 범례 (OWASP Top 10 기준)**:\n"
         report += f"* 🔴 **극도로 위험 (Critical Risk)**: OWASP Top 10 취약점 3개 이상\n"
-        report += f"* 🟠 **매우 위험 (High Risk)**: OWASP Top 10 취약점 1개 이상\n"
+        report += f"* 🟠 **매우 위험 (High Risk)**: OWASP Top 10 취약점 2개 이상\n"
         report += f"* 🟡 **위험 (Medium Risk)**: 총 취약점 2개 이상\n"
         report += f"* 🟢 **낮은 위험 (Low Risk)**: 총 취약점 1개 이하\n\n"
         
         report += f"**현재 위험성 등급 판단 근거**:\n"
         if owasp_vuln_count >= 3:
             report += f"* 극도로 위험: OWASP Top 10 취약점 {owasp_vuln_count}개 발견\n"
-        elif owasp_vuln_count >= 1:
+        elif owasp_vuln_count >= 2:
             report += f"* 매우 위험: OWASP Top 10 취약점 {owasp_vuln_count}개 발견\n"
         elif total_vulns >= 2:
             report += f"* 위험: 총 취약점 {total_vulns}개 발견\n"
         else:
             report += f"* 낮은 위험: 총 취약점 {total_vulns}개 발견\n"
         
-        report += f"\n**위험성 등급 판단 기준 상세 설명**:\n"
-        report += f"* **OWASP Top 10 취약점**: 웹 애플리케이션에서 가장 위험한 10가지 취약점 유형\n"
-        report += f"* **3개 이상**: 다중 취약점으로 인한 복합적 공격 위험\n"
-        report += f"* **1개 이상**: 단일 취약점으로도 심각한 보안 위협\n"
-        report += f"* **총 취약점 수**: 전체 발견된 취약점의 수량 기준\n"
+        report += f"\n**📋 위험성 등급 판단 기준 (쉽게 이해하기)**:\n"
+        report += f"* **🔴 극도로 위험 (3개 이상)**: 마치 집에 문이 3개나 열려있는 상황 - 도둑이 언제든 들어올 수 있음\n"
+        report += f"* **🟠 매우 위험 (2개 이상)**: 집에 문이 2개 열려있는 상황 - 도둑이 쉽게 침입 가능\n"
+        report += f"* **🟡 위험 (총 2개 이상)**: 집에 작은 창문이 열려있는 상황 - 도둑이 노력하면 들어올 수 있음\n"
+        report += f"* **🟢 낮은 위험 (1개 이하)**: 집에 작은 틈이 있는 상황 - 대부분 안전하지만 점검이 필요\n\n"
+        report += f"**💡 OWASP Top 10이란?**: 전 세계 보안 전문가들이 선정한 웹사이트에서 가장 위험한 10가지 취약점\n"
+        report += f"**💡 왜 OWASP Top 10이 위험한가?**: 해커들이 가장 많이 공격하는 취약점이므로 즉시 대응이 필요\n"
         report += "\n"
         report += f"**진단 결과 요약**:\n"
         report += f"* 총 발견 취약점: {total_vulns}개\n"

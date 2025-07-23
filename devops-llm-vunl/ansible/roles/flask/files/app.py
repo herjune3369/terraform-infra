@@ -326,10 +326,11 @@ def view_report(report_id):
                 processed_lines.append(f'<h3>{line[4:]}</h3>')
             elif line.startswith('---'):
                 processed_lines.append('<hr>')
-            elif line.startswith('![') and '](' in line and line.endswith(')'):
+            elif line.startswith('![') and '](' in line:
                 # 이미지 태그 처리 - 업로드된 취약점 진단 이미지를 실제로 표시
                 import re
-                img_match = re.match(r'!\[([^\]]*)\]\(([^)]+)\)', line)
+                # 더 유연한 정규식 패턴 사용
+                img_match = re.search(r'!\[([^\]]*)\]\(([^)]+)\)', line)
                 if img_match:
                     alt_text = img_match.group(1)
                     img_src = img_match.group(2)
@@ -341,8 +342,10 @@ def view_report(report_id):
                         <p style="margin-top: 10px; color: #7f8c8d; font-style: italic;">이미지에서 발견된 취약점들을 AI가 분석하여 본 보고서를 생성했습니다.</p>
                     </div>
                     ''')
+                    print(f"DEBUG: 이미지 태그 처리됨 - src: {img_src}, alt: {alt_text}")  # 디버깅용
                 else:
                     processed_lines.append(f'<p>{line}</p>')
+                    print(f"DEBUG: 이미지 태그 매칭 실패 - line: {line}")  # 디버깅용
             elif line.startswith('|') and '|' in line[1:]:
                 # 테이블 행 처리
                 if not in_table:

@@ -136,16 +136,58 @@ def generate_final_report(
         # 1. 전체 위험성 평가
         report += "### 1️⃣ 전체 위험성 평가\n\n"
         
-        # OWASP Top 10 취약점 기준으로 위험성 등급 평가
+        # OWASP Top 10 2021 기준으로 위험성 등급 평가
         owasp_vulns = []
+        owasp_categories = {
+            'A01:2021-Broken Access Control': [],
+            'A02:2021-Cryptographic Failures': [],
+            'A03:2021-Injection': [],
+            'A04:2021-Insecure Design': [],
+            'A05:2021-Security Misconfiguration': [],
+            'A06:2021-Vulnerable and Outdated Components': [],
+            'A07:2021-Identification and Authentication Failures': [],
+            'A08:2021-Software and Data Integrity Failures': [],
+            'A09:2021-Security Logging and Monitoring Failures': [],
+            'A10:2021-Server-Side Request Forgery (SSRF)': []
+        }
+        
         for vuln in vuln_list:
             vuln_type = vuln.get('type', '').lower()
-            # OWASP Top 10에 속하는 취약점들 판단
-            if any(keyword in vuln_type for keyword in [
-                'sql injection', '인젝션', 'xss', 'csrf', '경로 순회', 'path traversal',
-                '파일 업로드', 'file upload', '인증', 'authentication', '세션', 'session',
-                '정보 노출', 'information disclosure', '설정', 'configuration'
-            ]):
+            module = vuln.get('module', '')
+            
+            # OWASP Top 10 2021 기준 정확한 분류
+            if any(keyword in vuln_type for keyword in ['sql injection', '인젝션', 'nosql injection', 'ldap injection']):
+                owasp_categories['A03:2021-Injection'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['xss', '크로스사이트', 'cross-site scripting']):
+                owasp_categories['A03:2021-Injection'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['경로 순회', 'path traversal', 'directory traversal']):
+                owasp_categories['A01:2021-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['파일 업로드', 'file upload', 'unrestricted file upload']):
+                owasp_categories['A01:2021-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['인증', 'authentication', '로그인', 'login', '세션', 'session']):
+                owasp_categories['A07:2021-Identification and Authentication Failures'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['csrf', 'cross-site request forgery', '사이트 간 요청 위조']):
+                owasp_categories['A01:2021-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['정보 노출', 'information disclosure', '디버그', 'debug', '에러', 'error']):
+                owasp_categories['A05:2021-Security Misconfiguration'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['설정', 'configuration', '보안 설정', 'security config']):
+                owasp_categories['A05:2021-Security Misconfiguration'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['구성요소', 'component', '라이브러리', 'library', '버전', 'version']):
+                owasp_categories['A06:2021-Vulnerable and Outdated Components'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['암호화', 'encryption', 'ssl', 'tls', 'https']):
+                owasp_categories['A02:2021-Cryptographic Failures'].append(f"{vuln.get('type', '')}({module})")
+                owasp_vulns.append(vuln.get('type', ''))
+            elif any(keyword in vuln_type for keyword in ['로깅', 'logging', '모니터링', 'monitoring']):
+                owasp_categories['A09:2021-Security Logging and Monitoring Failures'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
         
         owasp_vuln_count = len(owasp_vulns)
@@ -160,124 +202,61 @@ def generate_final_report(
         else:
             risk_level = "🟢 **낮은 위험 (Low Risk)**"
         
-        # 🎯 **비즈니스 관점에서 이해하기 쉬운 위험성 평가**
-        risk_description = f"**📊 발견된 취약점 현황**: 총 {total_vulns}개의 보안 취약점이 발견되었습니다.\n\n"
+        # 💥 **경영진을 위한 핵심 위험 요약**
+        risk_description = f"**💥 핵심 위험 요약**:\n"
         
-        # 🔍 **전문가 분석 - 발견된 모든 취약점 종합 검토**
-        risk_description += "**🔍 전문가 종합 분석**:\n"
-        
-        # 발견된 모든 취약점 유형 수집
-        all_vuln_types = []
-        all_severities = []
-        all_modules = []
-        
-        for vuln in vuln_list:
-            vuln_type = vuln.get('type', '')
-            severity = vuln.get('severity', '')
-            module = vuln.get('module', '')
-            
-            if vuln_type and vuln_type not in all_vuln_types:
-                all_vuln_types.append(vuln_type)
-            if severity and severity not in all_severities:
-                all_severities.append(severity)
-            if module and module not in all_modules:
-                all_modules.append(module)
-        
-        # 종합 분석 결과 작성
-        risk_description += f"• **발견된 취약점 유형**: {', '.join(all_vuln_types) if all_vuln_types else '일반적인 웹 취약점'}\n"
-        risk_description += f"• **심각도 분포**: {', '.join(all_severities) if all_severities else '분석 중'}\n"
-        risk_description += f"• **영향받는 모듈**: {', '.join(all_modules) if all_modules else '전체 시스템'}\n"
-        
-        # 각 취약점별 상세 분석
-        risk_description += "\n**📋 취약점별 상세 분석**:\n"
-        for i, vuln in enumerate(vuln_list, 1):
-            vuln_type = vuln.get('type', '알 수 없는 취약점')
-            severity = vuln.get('severity', '분석 중')
-            module = vuln.get('module', '전체 시스템')
-            summary = vuln.get('summary', '상세 분석 필요')
-            
-            risk_description += f"**{i}. {vuln_type}** (심각도: {severity})\n"
-            risk_description += f"   - 위치: {module}\n"
-            risk_description += f"   - 설명: {summary}\n"
-            
-            # 위험성 정보가 있으면 추가
-            risk_info = vuln.get('risk', '')
-            if risk_info and risk_info != '위험성 정보가 없습니다.':
-                # 위험성 정보를 간단하게 요약
-                risk_summary = risk_info[:200] + "..." if len(risk_info) > 200 else risk_info
-                risk_description += f"   - 위험성: {risk_summary}\n"
-            
-            risk_description += "\n"
-        
-        # 종합 위험도 평가
-        risk_description += "**⚠️ 종합 위험도 평가**:\n"
         if owasp_vuln_count >= 3:
-            risk_description += "• **극도로 위험**: OWASP Top 10 취약점이 다수 발견되어 즉시 대응이 필요합니다.\n"
+            risk_description += f"**🔴 즉시 대응 필요** - {total_vulns}개 취약점 중 {owasp_vuln_count}개가 세계 최고 위험 취약점\n"
         elif owasp_vuln_count >= 2:
-            risk_description += "• **매우 위험**: OWASP Top 10 취약점이 발견되어 단기 내 대응이 필요합니다.\n"
+            risk_description += f"**🟠 긴급 대응 필요** - {total_vulns}개 취약점 중 {owasp_vuln_count}개가 세계 최고 위험 취약점\n"
         elif total_vulns >= 2:
-            risk_description += "• **위험**: 여러 취약점이 발견되어 중기 내 대응이 필요합니다.\n"
+            risk_description += f"**🟡 신속 대응 필요** - {total_vulns}개 취약점 발견\n"
         else:
-            risk_description += "• **낮은 위험**: 제한적인 취약점이 발견되어 정기 점검을 권장합니다.\n"
+            risk_description += f"**🟢 점검 필요** - {total_vulns}개 취약점 발견\n"
         
         risk_description += "\n"
         
-        # 🚨 **해킹 공격 가능성 설명 (발견된 취약점 기반)**
-        risk_description += "**🚨 해킹 공격 가능성**:\n"
+        # 🚨 **해커가 지금 당장 할 수 있는 일**
+        risk_description += "**🚨 해커가 지금 당장 할 수 있는 일**:\n"
         
-        # 발견된 취약점별 공격 가능성 분석
-        attack_possibilities = []
-        
+        # 가장 위험한 취약점 3개만 선별해서 간단하게 설명
+        critical_vulns = []
         for vuln in vuln_list:
             vuln_type = vuln.get('type', '').lower()
-            severity = vuln.get('severity', '')
-            module = vuln.get('module', '')
-            
-            # 취약점 유형별 공격 가능성 설명
-            if 'sql injection' in vuln_type or '인젝션' in vuln_type:
-                attack_possibilities.append(f"• **SQL 인젝션 공격**: {module}에서 데이터베이스 직접 접근 가능")
-            elif 'xss' in vuln_type or '크로스사이트' in vuln_type:
-                attack_possibilities.append(f"• **XSS 공격**: {module}에서 사용자 브라우저에 악성 스크립트 주입 가능")
-            elif 'csrf' in vuln_type or '사이트 간' in vuln_type:
-                attack_possibilities.append(f"• **CSRF 공격**: {module}에서 사용자 권한으로 무단 작업 실행 가능")
-            elif '인증' in vuln_type or '로그인' in vuln_type or 'authentication' in vuln_type:
-                attack_possibilities.append(f"• **인증 우회**: {module}에서 관리자 권한 획득 가능")
-            elif '파일 업로드' in vuln_type or 'upload' in vuln_type:
-                attack_possibilities.append(f"• **악성 파일 업로드**: {module}에서 서버에 악성 프로그램 설치 가능")
-            elif '경로 순회' in vuln_type or 'path traversal' in vuln_type:
-                attack_possibilities.append(f"• **경로 순회 공격**: {module}에서 시스템 파일 무단 접근 가능")
-            elif '정보 노출' in vuln_type or 'information disclosure' in vuln_type:
-                attack_possibilities.append(f"• **정보 노출**: {module}에서 민감한 정보 탈취 가능")
-            elif '설정' in vuln_type or 'configuration' in vuln_type:
-                attack_possibilities.append(f"• **설정 오류**: {module}에서 보안 설정 우회 가능")
-            else:
-                attack_possibilities.append(f"• **{vuln.get('type', '알 수 없는 취약점')}**: {module}에서 공격 가능")
+            if any(keyword in vuln_type for keyword in ['sql injection', '인젝션', '파일 업로드', 'upload', '인증', 'authentication']):
+                critical_vulns.append(vuln)
         
-        # 공격 가능성 목록 추가
-        if attack_possibilities:
-            risk_description += "\n".join(attack_possibilities) + "\n\n"
+        if critical_vulns:
+            for i, vuln in enumerate(critical_vulns[:3], 1):
+                vuln_type = vuln.get('type', '')
+                if 'sql' in vuln_type.lower() or '인젝션' in vuln_type.lower():
+                    risk_description += f"• **{i}. 고객 데이터 훔치기** - 모든 고객 정보를 그대로 가져갈 수 있음\n"
+                elif '파일' in vuln_type.lower() or 'upload' in vuln_type.lower():
+                    risk_description += f"• **{i}. 서버 장악** - 웹사이트를 완전히 마비시킬 수 있음\n"
+                elif '인증' in vuln_type.lower() or '로그인' in vuln_type.lower():
+                    risk_description += f"• **{i}. 관리자 권한 탈취** - 회사 시스템을 마음대로 조작할 수 있음\n"
         
-        # OWASP Top 10 취약점이 있는 경우 추가 설명
         if owasp_vuln_count > 0:
-            risk_description += f"**⚠️ OWASP Top 10 취약점 {owasp_vuln_count}개 발견**:\n"
-            risk_description += f"• **즉시 공격 가능**: 인터넷상의 누구나 이 취약점을 악용할 수 있음\n"
-            risk_description += f"• **자동화 도구**: 해커들이 쉽게 구할 수 있는 도구로 공격 가능\n"
-            risk_description += f"• **공격 난이도**: 낮음 (초보 해커도 공격 가능)\n\n"
+            risk_description += f"• **💀 초보 해커도 공격 가능** - 인터넷에 공개된 도구로 누구나 공격 가능\n\n"
         
-        # 다중 취약점 연계 공격 가능성
-        if total_vulns >= 3:
-            risk_description += f"**🔗 연계 공격 시나리오 ({total_vulns}개 취약점)**:\n"
-            risk_description += f"• **1단계**: 첫 번째 취약점으로 시스템 침입\n"
-            risk_description += f"• **2단계**: 두 번째 취약점으로 권한 확장\n"
-            risk_description += f"• **3단계**: 세 번째 취약점으로 데이터 탈취\n"
-            risk_description += f"• **결과**: 시스템 완전 장악 및 대규모 데이터 유출\n\n"
+        # 💰 **비즈니스 피해 예상**
+        risk_description += "**💰 예상 비즈니스 피해**:\n"
+        
+        if owasp_vuln_count >= 3:
+            risk_description += f"• **웹사이트 완전 마비** - 매출 100% 중단\n"
+            risk_description += f"• **고객 정보 100% 유출** - 개인정보보호법 위반 과태료 + 고객 이탈\n"
+            risk_description += f"• **예상 손실**: 최대 10억원 이상\n\n"
+        elif owasp_vuln_count >= 2:
+            risk_description += f"• **웹사이트 부분 마비** - 매출 50% 중단\n"
+            risk_description += f"• **고객 정보 대부분 유출** - 법적 책임 + 평판 손상\n"
+            risk_description += f"• **예상 손실**: 최대 5억원\n\n"
         elif total_vulns >= 2:
-            risk_description += f"**🔗 연계 공격 가능성 ({total_vulns}개 취약점)**:\n"
-            risk_description += f"• **복합 공격**: 여러 취약점을 조합하여 더 큰 피해 가능\n"
-            risk_description += f"• **공격 효율성**: 단일 취약점보다 높은 성공률\n\n"
-        
-        # 💼 **비즈니스 중단 위험 설명 (가장 가능성 높은 위험 중심)**
-        risk_description += "**💼 비즈니스 중단 위험**:\n"
+            risk_description += f"• **서비스 일시 중단** - 매출 20% 감소\n"
+            risk_description += f"• **고객 신뢰도 하락** - 브랜드 이미지 손상\n"
+            risk_description += f"• **예상 손실**: 최대 1억원\n\n"
+        else:
+            risk_description += f"• **미미한 영향** - 현재 매출에 직접적 영향 없음\n"
+            risk_description += f"• **예방적 조치 권장** - 향후 보안 강화 필요\n\n"
         
         # 취약점별 위험도 점수 계산 (가장 위험한 것 우선)
         vuln_risk_scores = []
@@ -670,18 +649,18 @@ def generate_final_report(
         if medium_severity_count > 0:
             report += f"* 중간 심각도: {medium_severity_count}개\n"
         
-        # OWASP Top 10 웹 취약점 유형별 요약 (모두 표기, 발견된 것만 카운트)
-        report += f"**OWASP Top 10 웹 취약점**:\n"
-        report += f"* A01: 인증 우회 (OWASP A07): {len(auth_vulns)}개\n"
-        report += f"* A02: 보안 설정 오류 (OWASP A05): {len([v for v in vuln_types if '설정' in v.lower() or 'config' in v.lower() or '보안' in v.lower()])}개\n"
-        report += f"* A03: XSS 취약점 (OWASP A03, CWE-79): {len(xss_vulns)}개\n"
-        report += f"* A04: 정보 노출 (OWASP A05): {len(info_vulns)}개\n"
-        report += f"* A05: SQL Injection (OWASP A03, CWE-89): {len([v for v in vuln_types if 'sql' in v.lower() or '인젝션' in v.lower()])}개\n"
-        report += f"* A06: CSRF (OWASP A01, CWE-352): {len([v for v in vuln_types if 'csrf' in v.lower() or '위조' in v.lower()])}개\n"
-        report += f"* A07: 경로 순회 (OWASP A01, CWE-22): {len([v for v in vuln_types if '경로' in v.lower() or '순회' in v.lower() or 'path' in v.lower()])}개\n"
-        report += f"* A08: 세션 관리 (OWASP A02, CWE-384): {len([v for v in vuln_types if '세션' in v.lower() or 'session' in v.lower()])}개\n"
-        report += f"* A09: 파일 업로드 (OWASP A05): {len(upload_vulns)}개\n"
-        report += f"* A10: 취약한 구성요소 (OWASP A06): {len([v for v in vuln_types if '구성요소' in v.lower() or 'component' in v.lower() or '라이브러리' in v.lower()])}개\n"
+        # OWASP Top 10 2021 웹 취약점 유형별 요약 (정확한 카테고리별 분류)
+        report += f"**OWASP Top 10 2021 웹 취약점**:\n"
+        report += f"* A01:2021 - 접근 제어 취약점 (Broken Access Control): {len(owasp_categories['A01:2021-Broken Access Control'])}개\n"
+        report += f"* A02:2021 - 암호화 실패 (Cryptographic Failures): {len(owasp_categories['A02:2021-Cryptographic Failures'])}개\n"
+        report += f"* A03:2021 - 인젝션 (Injection): {len(owasp_categories['A03:2021-Injection'])}개\n"
+        report += f"* A04:2021 - 안전하지 않은 설계 (Insecure Design): {len(owasp_categories['A04:2021-Insecure Design'])}개\n"
+        report += f"* A05:2021 - 보안 설정 오류 (Security Misconfiguration): {len(owasp_categories['A05:2021-Security Misconfiguration'])}개\n"
+        report += f"* A06:2021 - 취약하고 오래된 구성요소 (Vulnerable Components): {len(owasp_categories['A06:2021-Vulnerable and Outdated Components'])}개\n"
+        report += f"* A07:2021 - 식별 및 인증 실패 (Auth Failures): {len(owasp_categories['A07:2021-Identification and Authentication Failures'])}개\n"
+        report += f"* A08:2021 - 소프트웨어 및 데이터 무결성 실패 (Integrity Failures): {len(owasp_categories['A08:2021-Software and Data Integrity Failures'])}개\n"
+        report += f"* A09:2021 - 보안 로깅 및 모니터링 실패 (Logging Failures): {len(owasp_categories['A09:2021-Security Logging and Monitoring Failures'])}개\n"
+        report += f"* A10:2021 - 서버 사이드 요청 위조 (SSRF): {len(owasp_categories['A10:2021-Server-Side Request Forgery (SSRF)'])}개\n"
         
         report += "\n"
         

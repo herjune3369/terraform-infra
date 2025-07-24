@@ -5,13 +5,6 @@
       - python3-pip
       - python3-venv
       - mysql-client
-      - libpango-1.0-0
-      - libpangoft2-1.0-0
-      - libcairo2
-      - libpangocairo-1.0-0
-      - libgdk-pixbuf2.0-0
-      - libffi-dev
-      - shared-mime-info
     update_cache: yes
   become: true
 
@@ -37,7 +30,6 @@
       requests
       pymysql
       python-dotenv
-      weasyprint==60.2
     owner: ubuntu
     group: ubuntu
     mode: '0644'
@@ -143,13 +135,7 @@
     group: ubuntu
     mode: '0644'
 
-- name: Copy pdf_generator.py
-  copy:
-    src: pdf_generator.py
-    dest: /home/ubuntu/myapp/pdf_generator.py
-    owner: ubuntu
-    group: ubuntu
-    mode: '0644'
+
 
 - name: Create uploads directory
   file:

@@ -47,9 +47,9 @@ def generate_final_report(
 
 ---
 
-## 2. 취약점 요약 Table (OWASP Top 10 기준)
+## 2. 취약점 요약 Table (OWASP Top 10 2025 기준)
 
-| OWASP 카테고리 | 취약점 유형 | CVE/CWE |
+| OWASP Top 10 2025 카테고리 | 취약점 유형 | CVE/CWE |
 | ------------ | -------- | ------- |
 """
     
@@ -58,34 +58,34 @@ def generate_final_report(
         # 이미지에서 읽어온 실제 데이터 사용
         vuln_type = vuln.get('type', '알 수 없는 취약점')
         
-        # OWASP Top 10 카테고리 매핑
+        # OWASP Top 10 2025 카테고리 매핑
         vuln_type_lower = vuln_type.lower()
         if any(keyword in vuln_type_lower for keyword in ['sql injection', '인젝션', 'sql']):
-            owasp_category = "A03:2021 - Injection"
+            owasp_category = "A03:2025 - Injection"
             cve_cwe = "CWE-89"
         elif any(keyword in vuln_type_lower for keyword in ['xss', '크로스사이트', '스크립트']):
-            owasp_category = "A03:2021 - Injection"
+            owasp_category = "A03:2025 - Injection"
             cve_cwe = "CWE-79"
         elif any(keyword in vuln_type_lower for keyword in ['csrf', '위조', '요청']):
-            owasp_category = "A01:2021 - Broken Access Control"
+            owasp_category = "A01:2025 - Broken Access Control"
             cve_cwe = "CWE-352"
         elif any(keyword in vuln_type_lower for keyword in ['인증', 'authentication', '로그인']):
-            owasp_category = "A07:2021 - Identification and Authentication Failures"
+            owasp_category = "A07:2025 - Identification and Authentication Failures"
             cve_cwe = "CWE-287"
         elif any(keyword in vuln_type_lower for keyword in ['세션', 'session']):
-            owasp_category = "A02:2021 - Cryptographic Failures"
+            owasp_category = "A02:2025 - Cryptographic Failures"
             cve_cwe = "CWE-384"
         elif any(keyword in vuln_type_lower for keyword in ['업로드', '파일', 'file upload']):
-            owasp_category = "A05:2021 - Security Misconfiguration"
+            owasp_category = "A01:2025 - Broken Access Control"
             cve_cwe = "CWE-434"
         elif any(keyword in vuln_type_lower for keyword in ['경로', '순회', 'path traversal']):
-            owasp_category = "A01:2021 - Broken Access Control"
+            owasp_category = "A01:2025 - Broken Access Control"
             cve_cwe = "CWE-22"
         elif any(keyword in vuln_type_lower for keyword in ['정보', '노출', 'information disclosure']):
-            owasp_category = "A05:2021 - Security Misconfiguration"
+            owasp_category = "A05:2025 - Security Misconfiguration"
             cve_cwe = "CWE-200"
         elif any(keyword in vuln_type_lower for keyword in ['설정', 'configuration', '보안']):
-            owasp_category = "A05:2021 - Security Misconfiguration"
+            owasp_category = "A05:2025 - Security Misconfiguration"
             cve_cwe = "CWE-16"
         else:
             owasp_category = "기타 취약점"
@@ -136,61 +136,62 @@ def generate_final_report(
         # 1. 전체 위험성 평가
         report += "### 1️⃣ 전체 위험성 평가\n\n"
         
-        # OWASP Top 10 2021 기준으로 위험성 등급 평가
+        # OWASP Top 10 2025 기준으로 위험성 등급 평가
         owasp_vulns = []
         owasp_categories = {
-            'A01:2021-Broken Access Control': [],
-            'A02:2021-Cryptographic Failures': [],
-            'A03:2021-Injection': [],
-            'A04:2021-Insecure Design': [],
-            'A05:2021-Security Misconfiguration': [],
-            'A06:2021-Vulnerable and Outdated Components': [],
-            'A07:2021-Identification and Authentication Failures': [],
-            'A08:2021-Software and Data Integrity Failures': [],
-            'A09:2021-Security Logging and Monitoring Failures': [],
-            'A10:2021-Server-Side Request Forgery (SSRF)': []
+            'A01:2025-Broken Access Control': [],
+            'A02:2025-Cryptographic Failures': [],
+            'A03:2025-Injection': [],
+            'A04:2025-Insecure Design': [],
+            'A05:2025-Security Misconfiguration': [],
+            'A06:2025-Vulnerable and Outdated Components': [],
+            'A07:2025-Identification and Authentication Failures': [],
+            'A08:2025-Software and Data Integrity Failures': [],
+            'A09:2025-Security Logging and Monitoring Failures': [],
+            'A10:2025-Server-Side Request Forgery (SSRF)': []
         }
         
         for vuln in vuln_list:
             vuln_type = vuln.get('type', '').lower()
             module = vuln.get('module', '')
             
-            # OWASP Top 10 2021 기준 정확한 분류
+            # OWASP Top 10 2025 기준 정확한 분류
             if any(keyword in vuln_type for keyword in ['sql injection', '인젝션', 'nosql injection', 'ldap injection']):
-                owasp_categories['A03:2021-Injection'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A03:2025-Injection'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['xss', '크로스사이트', 'cross-site scripting']):
-                owasp_categories['A03:2021-Injection'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A03:2025-Injection'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['경로 순회', 'path traversal', 'directory traversal']):
-                owasp_categories['A01:2021-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A01:2025-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['파일 업로드', 'file upload', 'unrestricted file upload']):
-                owasp_categories['A01:2021-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A01:2025-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['인증', 'authentication', '로그인', 'login', '세션', 'session']):
-                owasp_categories['A07:2021-Identification and Authentication Failures'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A07:2025-Identification and Authentication Failures'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['csrf', 'cross-site request forgery', '사이트 간 요청 위조']):
-                owasp_categories['A01:2021-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A01:2025-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['정보 노출', 'information disclosure', '디버그', 'debug', '에러', 'error']):
-                owasp_categories['A05:2021-Security Misconfiguration'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A05:2025-Security Misconfiguration'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['설정', 'configuration', '보안 설정', 'security config']):
-                owasp_categories['A05:2021-Security Misconfiguration'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A05:2025-Security Misconfiguration'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['구성요소', 'component', '라이브러리', 'library', '버전', 'version']):
-                owasp_categories['A06:2021-Vulnerable and Outdated Components'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A06:2025-Vulnerable and Outdated Components'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['암호화', 'encryption', 'ssl', 'tls', 'https']):
-                owasp_categories['A02:2021-Cryptographic Failures'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A06:2025-Vulnerable and Outdated Components'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['로깅', 'logging', '모니터링', 'monitoring']):
-                owasp_categories['A09:2021-Security Logging and Monitoring Failures'].append(f"{vuln.get('type', '')}({module})")
+                owasp_categories['A09:2025-Security Logging and Monitoring Failures'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
         
-        owasp_vuln_count = len(owasp_vulns)
+        # OWASP Top 10 2025에 분류된 실제 취약점 개수 계산
+        owasp_vuln_count = sum(len(category) for category in owasp_categories.values())
         
         # 위험성 등급 결정 (OWASP Top 10 기준)
         if owasp_vuln_count >= 3:
@@ -206,9 +207,11 @@ def generate_final_report(
         risk_description = f"**💥 핵심 위험 요약**:\n"
         
         if owasp_vuln_count >= 3:
-            risk_description += f"**🔴 즉시 대응 필요** - {total_vulns}개 취약점 중 {owasp_vuln_count}개가 세계 최고 위험 취약점\n"
+            risk_description += f"**🔴 즉시 대응 필요** - {total_vulns}개 취약점 중 {owasp_vuln_count}개가 OWASP Top 10 2025 (세계 최고 위험 취약점)\n"
+            risk_description += f"💡 **왜 위험한가?**: 전 세계 해커들이 가장 많이 공격하는 취약점으로, 초보 해커도 쉽게 공격 가능\n"
         elif owasp_vuln_count >= 2:
-            risk_description += f"**🟠 긴급 대응 필요** - {total_vulns}개 취약점 중 {owasp_vuln_count}개가 세계 최고 위험 취약점\n"
+            risk_description += f"**🟠 긴급 대응 필요** - {total_vulns}개 취약점 중 {owasp_vuln_count}개가 OWASP Top 10 2025 (세계 최고 위험 취약점)\n"
+            risk_description += f"💡 **왜 위험한가?**: 전 세계 해커들이 가장 많이 공격하는 취약점으로, 초보 해커도 쉽게 공격 가능\n"
         elif total_vulns >= 2:
             risk_description += f"**🟡 신속 대응 필요** - {total_vulns}개 취약점 발견\n"
         else:
@@ -239,24 +242,27 @@ def generate_final_report(
         if owasp_vuln_count > 0:
             risk_description += f"• **💀 초보 해커도 공격 가능** - 인터넷에 공개된 도구로 누구나 공격 가능\n\n"
         
-        # 💰 **비즈니스 피해 예상**
-        risk_description += "**💰 예상 비즈니스 피해**:\n"
+        # 💰 **비즈니스 피해 시나리오**
+        risk_description += "**💰 비즈니스 피해 시나리오**:\n"
         
         if owasp_vuln_count >= 3:
-            risk_description += f"• **웹사이트 완전 마비** - 매출 100% 중단\n"
-            risk_description += f"• **고객 정보 100% 유출** - 개인정보보호법 위반 과태료 + 고객 이탈\n"
-            risk_description += f"• **예상 손실**: 최대 10억원 이상\n\n"
+            risk_description += f"• **웹사이트 완전 마비** - 해커가 서버를 완전히 장악하여 모든 서비스 중단\n"
+            risk_description += f"• **고객 정보 100% 유출** - 개인정보, 결제정보, 비밀번호 등 모든 데이터 탈취\n"
+            risk_description += f"• **법적 책임 및 과태료** - 개인정보보호법 위반으로 정부 기관의 과태료 부과\n"
+            risk_description += f"• **고객 이탈 및 평판 손상** - 신뢰도 완전 상실로 고객 대량 이탈\n\n"
         elif owasp_vuln_count >= 2:
-            risk_description += f"• **웹사이트 부분 마비** - 매출 50% 중단\n"
-            risk_description += f"• **고객 정보 대부분 유출** - 법적 책임 + 평판 손상\n"
-            risk_description += f"• **예상 손실**: 최대 5억원\n\n"
+            risk_description += f"• **웹사이트 부분 마비** - 핵심 기능 장애로 서비스 품질 급격히 저하\n"
+            risk_description += f"• **고객 정보 대부분 유출** - 민감한 개인정보 및 비즈니스 데이터 탈취\n"
+            risk_description += f"• **법적 분쟁 위험** - 고객과의 소송 및 보상 책임\n"
+            risk_description += f"• **브랜드 이미지 손상** - 언론 보도로 인한 평판 하락\n\n"
         elif total_vulns >= 2:
-            risk_description += f"• **서비스 일시 중단** - 매출 20% 감소\n"
-            risk_description += f"• **고객 신뢰도 하락** - 브랜드 이미지 손상\n"
-            risk_description += f"• **예상 손실**: 최대 1억원\n\n"
+            risk_description += f"• **서비스 일시 중단** - 일부 기능 장애로 고객 불편 초래\n"
+            risk_description += f"• **고객 신뢰도 하락** - 서비스 안정성에 대한 의문 제기\n"
+            risk_description += f"• **부분적 데이터 유출** - 제한적이지만 민감한 정보 노출\n"
+            risk_description += f"• **고객 불만 증가** - 서비스 품질 저하로 인한 고객 이탈\n\n"
         else:
-            risk_description += f"• **미미한 영향** - 현재 매출에 직접적 영향 없음\n"
-            risk_description += f"• **예방적 조치 권장** - 향후 보안 강화 필요\n\n"
+            risk_description += f"• **미미한 영향** - 현재 비즈니스에 직접적 영향 없음\n"
+            risk_description += f"• **예방적 조치 권장** - 향후 보안 강화를 통한 위험 사전 차단\n\n"
         
         # 취약점별 위험도 점수 계산 (가장 위험한 것 우선)
         vuln_risk_scores = []
@@ -310,10 +316,9 @@ def generate_final_report(
             
             for i, (vuln, score) in enumerate(top_risks, 1):
                 vuln_type = vuln.get('type', '알 수 없는 취약점')
-                severity = vuln.get('severity', '분석 중')
                 module = vuln.get('module', '전체 시스템')
                 
-                risk_description += f"**{i}. {vuln_type}** (위험도: {score}점, 심각도: {severity})\n"
+                risk_description += f"**{i}. {vuln_type}**\n"
                 risk_description += f"   - 위치: {module}\n"
                 
                 # 취약점별 구체적인 비즈니스 중단 시나리오
@@ -344,126 +349,8 @@ def generate_final_report(
                 
                 risk_description += "\n"
         
-        # 💰 **비즈니스 영향도 (발견된 취약점 기반 동적 분석)**
-        
-        # 총 위험도 점수 계산
-        total_risk_score = sum(score for _, score in vuln_risk_scores)
-        
-        risk_description += f"**💰 비즈니스 영향도 분석 (총 위험도: {total_risk_score}점)**:\n\n"
-        
-        # 발견된 취약점별 구체적인 비즈니스 영향 계산
-        business_impacts = {
-            'service_disruption': 0,  # 서비스 중단
-            'data_breach': 0,         # 데이터 유출
-            'financial_loss': 0,      # 금융 손실
-            'legal_liability': 0,     # 법적 책임
-            'reputation_damage': 0,   # 평판 손상
-            'customer_loss': 0        # 고객 이탈
-        }
-        
-        # 각 취약점별 비즈니스 영향 점수 계산
-        for vuln, score in vuln_risk_scores:
-            vuln_type = vuln.get('type', '').lower()
-            module = vuln.get('module', '')
-            
-            # SQL 인젝션: 데이터베이스 침해로 인한 최대 피해
-            if 'sql injection' in vuln_type or '인젝션' in vuln_type:
-                business_impacts['service_disruption'] += 10  # 즉시 서비스 중단
-                business_impacts['data_breach'] += 15        # 모든 데이터 유출
-                business_impacts['financial_loss'] += 12     # 대규모 금융 손실
-                business_impacts['legal_liability'] += 10    # 개인정보보호법 위반
-                business_impacts['reputation_damage'] += 8   # 브랜드 파괴
-                business_impacts['customer_loss'] += 10      # 고객 완전 이탈
-                
-            # 파일 업로드: 서버 장악으로 인한 피해
-            elif '파일 업로드' in vuln_type or 'upload' in vuln_type:
-                business_impacts['service_disruption'] += 12  # 서버 완전 장악
-                business_impacts['data_breach'] += 10        # 서버 데이터 유출
-                business_impacts['financial_loss'] += 15     # 랜섬웨어 요구
-                business_impacts['legal_liability'] += 8     # 시스템 장악
-                business_impacts['reputation_damage'] += 10  # 완전한 신뢰도 상실
-                business_impacts['customer_loss'] += 12      # 고객 대량 이탈
-                
-            # 인증 우회: 관리자 권한 탈취
-            elif '인증' in vuln_type or '로그인' in vuln_type or 'authentication' in vuln_type:
-                business_impacts['service_disruption'] += 8   # 시스템 설정 변경
-                business_impacts['data_breach'] += 12        # 모든 데이터 접근
-                business_impacts['financial_loss'] += 10     # 무단 거래 실행
-                business_impacts['legal_liability'] += 12    # 관리자 권한 악용
-                business_impacts['reputation_damage'] += 10  # 브랜드 이미지 파괴
-                business_impacts['customer_loss'] += 10      # 고객 신뢰도 상실
-                
-            # XSS: 사용자 정보 탈취
-            elif 'xss' in vuln_type or '크로스사이트' in vuln_type:
-                business_impacts['service_disruption'] += 3   # 부분적 서비스 장애
-                business_impacts['data_breach'] += 8         # 사용자 개인정보 유출
-                business_impacts['financial_loss'] += 6      # 고객 피해 보상
-                business_impacts['legal_liability'] += 8     # 개인정보 유출
-                business_impacts['reputation_damage'] += 6   # 서비스 신뢰도 하락
-                business_impacts['customer_loss'] += 8       # 고객 이탈
-                
-            # CSRF: 무단 작업 실행
-            elif 'csrf' in vuln_type or '사이트 간' in vuln_type:
-                business_impacts['service_disruption'] += 2   # 기능 오작동
-                business_impacts['data_breach'] += 5         # 제한적 정보 유출
-                business_impacts['financial_loss'] += 8      # 무단 거래로 인한 손실
-                business_impacts['legal_liability'] += 6     # 무단 작업 실행
-                business_impacts['reputation_damage'] += 5   # 서비스 신뢰도 하락
-                business_impacts['customer_loss'] += 6       # 고객 불만 증가
-                
-            # 기타 취약점
-            else:
-                business_impacts['service_disruption'] += 2
-                business_impacts['data_breach'] += 3
-                business_impacts['financial_loss'] += 3
-                business_impacts['legal_liability'] += 3
-                business_impacts['reputation_damage'] += 3
-                business_impacts['customer_loss'] += 3
-        
-        # 비즈니스 영향도 등급 결정
-        max_impact = max(business_impacts.values())
-        
-        if max_impact >= 40:
-            risk_description += f"**💀 극도로 위험한 비즈니스 영향**:\n"
-            risk_description += f"• **서비스 중단**: {business_impacts['service_disruption']}점 - 즉시 웹사이트 마비\n"
-            risk_description += f"• **데이터 유출**: {business_impacts['data_breach']}점 - 고객 정보 100% 노출\n"
-            risk_description += f"• **금융 손실**: {business_impacts['financial_loss']}점 - 최대 3억원 손실 예상\n"
-            risk_description += f"• **법적 책임**: {business_impacts['legal_liability']}점 - 개인정보보호법 위반 과태료\n"
-            risk_description += f"• **평판 손상**: {business_impacts['reputation_damage']}점 - 브랜드 완전 파괴\n"
-            risk_description += f"• **고객 이탈**: {business_impacts['customer_loss']}점 - 고객 100% 이탈\n\n"
-            
-        elif max_impact >= 25:
-            risk_description += f"**🚨 매우 위험한 비즈니스 영향**:\n"
-            risk_description += f"• **서비스 장애**: {business_impacts['service_disruption']}점 - 일부 기능 마비\n"
-            risk_description += f"• **데이터 유출**: {business_impacts['data_breach']}점 - 대부분 고객 정보 노출\n"
-            risk_description += f"• **금융 손실**: {business_impacts['financial_loss']}점 - 최대 1억원 손실 예상\n"
-            risk_description += f"• **법적 책임**: {business_impacts['legal_liability']}점 - 관련 법규 위반\n"
-            risk_description += f"• **평판 손상**: {business_impacts['reputation_damage']}점 - 브랜드 심각한 손상\n"
-            risk_description += f"• **고객 이탈**: {business_impacts['customer_loss']}점 - 고객 50-80% 이탈\n\n"
-            
-        elif max_impact >= 15:
-            risk_description += f"**⚠️ 위험한 비즈니스 영향**:\n"
-            risk_description += f"• **서비스 장애**: {business_impacts['service_disruption']}점 - 부분적 기능 오작동\n"
-            risk_description += f"• **데이터 유출**: {business_impacts['data_breach']}점 - 일부 정보 노출 위험\n"
-            risk_description += f"• **금융 손실**: {business_impacts['financial_loss']}점 - 최대 3천만원 손실 예상\n"
-            risk_description += f"• **법적 책임**: {business_impacts['legal_liability']}점 - 규제 위반 가능성\n"
-            risk_description += f"• **평판 손상**: {business_impacts['reputation_damage']}점 - 서비스 신뢰도 하락\n"
-            risk_description += f"• **고객 이탈**: {business_impacts['customer_loss']}점 - 고객 10-30% 이탈\n\n"
-            
-        else:
-            risk_description += f"**🟢 낮은 비즈니스 영향**:\n"
-            risk_description += f"• **서비스 영향**: {business_impacts['service_disruption']}점 - 미미한 영향\n"
-            risk_description += f"• **데이터 보호**: {business_impacts['data_breach']}점 - 안전함\n"
-            risk_description += f"• **금융 안정**: {business_impacts['financial_loss']}점 - 직접적 손실 없음\n"
-            risk_description += f"• **법적 안전**: {business_impacts['legal_liability']}점 - 규제 준수\n"
-            risk_description += f"• **평판 유지**: {business_impacts['reputation_damage']}점 - 브랜드 안전\n"
-            risk_description += f"• **고객 유지**: {business_impacts['customer_loss']}점 - 고객 이탈 없음\n\n"
-        
-        # 구체적인 피해 예상 금액
-        total_financial_impact = business_impacts['financial_loss'] * 1000000  # 백만원 단위
-        risk_description += f"**💰 예상 피해 금액**: 약 {total_financial_impact:,}원\n"
-        risk_description += f"**📊 영향 지속 기간**: {max(1, total_risk_score // 10)}개월\n"
-        risk_description += f"**🎯 복구 필요 기간**: {max(3, total_risk_score // 5)}개월\n\n"
+
+
         
         # 🎯 **해커 입장에서 본 실제 해킹 시나리오**
         risk_description += "**🎯 해커 입장에서 본 실제 해킹 시나리오**:\n"
@@ -616,17 +503,17 @@ def generate_final_report(
 • **최소 비용**: 보안 개선에 1백만원 이하 예상"""
         
         report += f"**위험성 등급**: {risk_level}\n\n"
-        report += f"**위험성 등급 분류 범례 (OWASP Top 10 기준)**:\n"
-        report += f"* 🔴 **극도로 위험 (Critical Risk)**: OWASP Top 10 취약점 3개 이상\n"
-        report += f"* 🟠 **매우 위험 (High Risk)**: OWASP Top 10 취약점 2개 이상\n"
+        report += f"**위험성 등급 분류 범례 (OWASP Top 10 2025 기준)**:\n"
+        report += f"* 🔴 **극도로 위험 (Critical Risk)**: OWASP Top 10 2025 취약점 3개 이상\n"
+        report += f"* 🟠 **매우 위험 (High Risk)**: OWASP Top 10 2025 취약점 2개 이상\n"
         report += f"* 🟡 **위험 (Medium Risk)**: 총 취약점 2개 이상\n"
         report += f"* 🟢 **낮은 위험 (Low Risk)**: 총 취약점 1개 이하\n\n"
         
         report += f"**현재 위험성 등급 판단 근거**:\n"
         if owasp_vuln_count >= 3:
-            report += f"* 극도로 위험: OWASP Top 10 취약점 {owasp_vuln_count}개 발견\n"
+            report += f"* 극도로 위험: OWASP Top 10 2025 취약점 {owasp_vuln_count}개 발견\n"
         elif owasp_vuln_count >= 2:
-            report += f"* 매우 위험: OWASP Top 10 취약점 {owasp_vuln_count}개 발견\n"
+            report += f"* 매우 위험: OWASP Top 10 2025 취약점 {owasp_vuln_count}개 발견\n"
         elif total_vulns >= 2:
             report += f"* 위험: 총 취약점 {total_vulns}개 발견\n"
         else:
@@ -637,8 +524,8 @@ def generate_final_report(
         report += f"* **🟠 매우 위험 (2개 이상)**: 집에 문이 2개 열려있는 상황 - 도둑이 쉽게 침입 가능\n"
         report += f"* **🟡 위험 (총 2개 이상)**: 집에 작은 창문이 열려있는 상황 - 도둑이 노력하면 들어올 수 있음\n"
         report += f"* **🟢 낮은 위험 (1개 이하)**: 집에 작은 틈이 있는 상황 - 대부분 안전하지만 점검이 필요\n\n"
-        report += f"**💡 OWASP Top 10이란?**: 전 세계 보안 전문가들이 선정한 웹사이트에서 가장 위험한 10가지 취약점\n"
-        report += f"**💡 왜 OWASP Top 10이 위험한가?**: 해커들이 가장 많이 공격하는 취약점이므로 즉시 대응이 필요\n"
+        report += f"**💡 OWASP Top 10 2025이란?**: 전 세계 보안 전문가들이 선정한 웹사이트에서 가장 위험한 10가지 취약점 (2025년 최신 기준)\n"
+        report += f"**💡 왜 OWASP Top 10 2025가 위험한가?**: 해커들이 가장 많이 공격하는 취약점이므로 즉시 대응이 필요\n"
         report += "\n"
         report += f"**진단 결과 요약**:\n"
         report += f"* 총 발견 취약점: {total_vulns}개\n"
@@ -649,18 +536,18 @@ def generate_final_report(
         if medium_severity_count > 0:
             report += f"* 중간 심각도: {medium_severity_count}개\n"
         
-        # OWASP Top 10 2021 웹 취약점 유형별 요약 (정확한 카테고리별 분류)
-        report += f"**OWASP Top 10 2021 웹 취약점**:\n"
-        report += f"* A01:2021 - 접근 제어 취약점 (Broken Access Control): {len(owasp_categories['A01:2021-Broken Access Control'])}개\n"
-        report += f"* A02:2021 - 암호화 실패 (Cryptographic Failures): {len(owasp_categories['A02:2021-Cryptographic Failures'])}개\n"
-        report += f"* A03:2021 - 인젝션 (Injection): {len(owasp_categories['A03:2021-Injection'])}개\n"
-        report += f"* A04:2021 - 안전하지 않은 설계 (Insecure Design): {len(owasp_categories['A04:2021-Insecure Design'])}개\n"
-        report += f"* A05:2021 - 보안 설정 오류 (Security Misconfiguration): {len(owasp_categories['A05:2021-Security Misconfiguration'])}개\n"
-        report += f"* A06:2021 - 취약하고 오래된 구성요소 (Vulnerable Components): {len(owasp_categories['A06:2021-Vulnerable and Outdated Components'])}개\n"
-        report += f"* A07:2021 - 식별 및 인증 실패 (Auth Failures): {len(owasp_categories['A07:2021-Identification and Authentication Failures'])}개\n"
-        report += f"* A08:2021 - 소프트웨어 및 데이터 무결성 실패 (Integrity Failures): {len(owasp_categories['A08:2021-Software and Data Integrity Failures'])}개\n"
-        report += f"* A09:2021 - 보안 로깅 및 모니터링 실패 (Logging Failures): {len(owasp_categories['A09:2021-Security Logging and Monitoring Failures'])}개\n"
-        report += f"* A10:2021 - 서버 사이드 요청 위조 (SSRF): {len(owasp_categories['A10:2021-Server-Side Request Forgery (SSRF)'])}개\n"
+        # OWASP Top 10 2025 웹 취약점 유형별 요약 (정확한 카테고리별 분류)
+        report += f"**OWASP Top 10 2025 웹 취약점**:\n"
+        report += f"* A01:2025 - 접근 제어 취약점 (Broken Access Control): {len(owasp_categories['A01:2025-Broken Access Control'])}개\n"
+        report += f"* A02:2025 - 암호화 실패 (Cryptographic Failures): {len(owasp_categories['A02:2025-Cryptographic Failures'])}개\n"
+        report += f"* A03:2025 - 인젝션 (Injection): {len(owasp_categories['A03:2025-Injection'])}개\n"
+        report += f"* A04:2025 - 안전하지 않은 설계 (Insecure Design): {len(owasp_categories['A04:2025-Insecure Design'])}개\n"
+        report += f"* A05:2025 - 보안 설정 오류 (Security Misconfiguration): {len(owasp_categories['A05:2025-Security Misconfiguration'])}개\n"
+        report += f"* A06:2025 - 취약하고 오래된 구성요소 (Vulnerable Components): {len(owasp_categories['A06:2025-Vulnerable and Outdated Components'])}개\n"
+        report += f"* A07:2025 - 식별 및 인증 실패 (Auth Failures): {len(owasp_categories['A07:2025-Identification and Authentication Failures'])}개\n"
+        report += f"* A08:2025 - 소프트웨어 및 데이터 무결성 실패 (Integrity Failures): {len(owasp_categories['A08:2025-Software and Data Integrity Failures'])}개\n"
+        report += f"* A09:2025 - 보안 로깅 및 모니터링 실패 (Logging Failures): {len(owasp_categories['A09:2025-Security Logging and Monitoring Failures'])}개\n"
+        report += f"* A10:2025 - 서버 사이드 요청 위조 (SSRF): {len(owasp_categories['A10:2025-Server-Side Request Forgery (SSRF)'])}개\n"
         
         report += "\n"
         
@@ -710,16 +597,16 @@ def generate_final_report(
         
         # APT 공격 위험도 등급 결정
         if apt_attack_score >= 30:
-            report += f"**💀 극도로 높음 ({apt_attack_score}점)** - 발견된 취약점들로 완전한 시스템 장악 및 단계별 침투 가능\n"
+            report += f"**💀 극도로 높음** - 발견된 취약점들로 완전한 시스템 장악 및 단계별 침투 가능\n"
             report += f"**🔍 주요 공격 벡터**: {', '.join(apt_attack_vectors[:3])}\n"
         elif apt_attack_score >= 20:
-            report += f"**🚨 매우 높음 ({apt_attack_score}점)** - 핵심 시스템 침투 및 데이터 유출 위험\n"
+            report += f"**🚨 매우 높음** - 핵심 시스템 침투 및 데이터 유출 위험\n"
             report += f"**🔍 주요 공격 벡터**: {', '.join(apt_attack_vectors[:3])}\n"
         elif apt_attack_score >= 10:
-            report += f"**⚠️ 높음 ({apt_attack_score}점)** - 다중 취약점으로 인한 복합적 공격 시나리오 구성 가능\n"
+            report += f"**⚠️ 높음** - 다중 취약점으로 인한 복합적 공격 시나리오 구성 가능\n"
             report += f"**🔍 주요 공격 벡터**: {', '.join(apt_attack_vectors[:2])}\n"
         else:
-            report += f"**🟡 중간 ({apt_attack_score}점)** - 제한적이지만 연계 공격 가능성 존재\n"
+            report += f"**🟡 중간** - 제한적이지만 연계 공격 가능성 존재\n"
             report += f"**🔍 발견된 취약점**: {', '.join(apt_attack_vectors)}\n"
         
         report += "\n---\n\n"

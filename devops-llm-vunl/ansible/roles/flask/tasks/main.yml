@@ -165,8 +165,37 @@
 
 - name: Start Flask app with nohup
   shell: |
-    source /home/ubuntu/myapp/venv/bin/activate
-    nohup python /home/ubuntu/myapp/app.py > /home/ubuntu/myapp/flask.log 2>&1 &
+    cd /home/ubuntu/myapp
+    source venv/bin/activate
+    export FLASK_APP=app.py
+    export FLASK_ENV=production
+    export RDS_HOST={{ rds_endpoint }}
+    export RDS_USER=admin
+    export RDS_PASSWORD={{ db_password }}
+    export RDS_DATABASE=flask_app
+    export GEMINI_API_KEY={{ gemini_api_key | default('your-gemini-api-key-here') }}
+    export UPLOAD_FOLDER=uploads
+    export MAX_CONTENT_LENGTH=16777216
+    export SECRET_KEY=your-secret-key-here
+    
+    # 기존 프로세스 종료
+    pkill -f app.py || true
+    
+    # Flask 앱 시작
+    nohup python app.py > flask.log 2>&1 &
+    echo $! > flask.pid
+    
+    # 잠시 대기
+    sleep 3
+    
+    # 프로세스 확인
+    if ps -p $(cat flask.pid) > /dev/null; then
+      echo "Flask 앱이 성공적으로 시작되었습니다. PID: $(cat flask.pid)"
+    else
+      echo "Flask 앱 시작 실패"
+      cat flask.log
+      exit 1
+    fi
   args:
     executable: /bin/bash
   become: true
@@ -195,6 +224,16 @@
 - name: Display Flask process status
   debug:
     var: flask_process.stdout_lines
+
+- name: Check if port 5000 is listening
+  shell: netstat -tlnp | grep :5000 || ss -tlnp | grep :5000
+  register: port_check
+  become: true
+  ignore_errors: true
+
+- name: Display port check result
+  debug:
+    var: port_check.stdout_lines
 
 - name: Wait for Flask app to start
   wait_for:

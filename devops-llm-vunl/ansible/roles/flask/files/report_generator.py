@@ -130,7 +130,7 @@ def generate_final_report(
             owasp_summary['A07:2025 - 식별 및 인증 실패 (Auth Failures)'] += 1
         elif any(keyword in vuln_type for keyword in ['csrf', 'cross-site request forgery', '사이트 간 요청 위조']):
             owasp_summary['A01:2025 - 접근 제어 취약점 (Broken Access Control)'] += 1
-        elif any(keyword in vuln_type for keyword in ['정보 노출', 'information disclosure', '디버그', 'debug', '에러', 'error']):
+        elif any(keyword in vuln_type for keyword in ['정보 노출', '정보 누출', 'information disclosure', 'information leakage', '디버그', 'debug', '에러', 'error']):
             owasp_summary['A05:2025 - 보안 설정 오류 (Security Misconfiguration)'] += 1
         elif any(keyword in vuln_type for keyword in ['설정', 'configuration', '보안 설정', 'security config']):
             owasp_summary['A05:2025 - 보안 설정 오류 (Security Misconfiguration)'] += 1
@@ -226,7 +226,7 @@ def generate_final_report(
             elif any(keyword in vuln_type for keyword in ['csrf', 'cross-site request forgery', '사이트 간 요청 위조']):
                 owasp_categories['A01:2025-Broken Access Control'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
-            elif any(keyword in vuln_type for keyword in ['정보 노출', 'information disclosure', '디버그', 'debug', '에러', 'error']):
+            elif any(keyword in vuln_type for keyword in ['정보 노출', '정보 누출', 'information disclosure', 'information leakage', '디버그', 'debug', '에러', 'error']):
                 owasp_categories['A05:2025-Security Misconfiguration'].append(f"{vuln.get('type', '')}({module})")
                 owasp_vulns.append(vuln.get('type', ''))
             elif any(keyword in vuln_type for keyword in ['설정', 'configuration', '보안 설정', 'security config']):
@@ -243,8 +243,8 @@ def generate_final_report(
                 owasp_vulns.append(vuln.get('type', ''))
         
         # OWASP Top 10 2025에 분류된 실제 취약점 개수 계산
-        # 모든 웹 취약점은 OWASP Top 10 2025에 해당하므로 total_vulns와 동일
-        owasp_vuln_count = total_vulns
+        # 실제로 OWASP 카테고리에 분류된 취약점만 계산
+        owasp_vuln_count = len(owasp_vulns)
         
         # 위험성 등급 결정 (OWASP Top 10 기준)
         if owasp_vuln_count >= 3:

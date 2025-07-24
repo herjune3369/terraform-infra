@@ -350,8 +350,8 @@ class PDFGenerator:
             # 폰트 설정
             font_config = FontConfiguration()
             
-            # HTML을 PDF로 변환 (더 안전한 방법)
-            html_doc = HTML(string=html_content, base_url=os.getcwd())
+            # HTML을 PDF로 변환 (가장 안전한 방법)
+            html_doc = HTML(string=html_content)
             html_doc.write_pdf(pdf_path, font_config=font_config)
             
         except Exception as e:

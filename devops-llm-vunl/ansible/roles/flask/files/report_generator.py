@@ -8,6 +8,7 @@ def generate_final_report(
     vuln_list: List[Dict], 
     target_system: str = "웹 애플리케이션",
     image_filename: str = "unknown.jpg",
+    website_url: str = "",
     author: str = "보안진단팀"
 ) -> str:
     """
@@ -36,6 +37,7 @@ def generate_final_report(
 * **작성일**: {today}
 * **작성자/팀**: {author}
 * **대상 시스템**: {target_system}
+* **분석 대상 웹사이트**: {website_url if website_url else "N/A"}
 * **진단 이미지**: {image_filename}
 * **보고 목적**: 진단된 취약점을 통해 조직원의 보안정책 준수 의지를 강화하고, 보호동기 이론(PMT) 기반 실행 전략을 제시
 

@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 import uuid
 from datetime import datetime
 from vulnService import create_report, get_report, list_reports, delete_report, generate_final_report_md
+from pdf_generator import generate_pdf_report
 
 # 환경변수 로딩
 load_dotenv()
@@ -58,8 +59,14 @@ HTML_FORM = """
         <div class="upload-form">
             <h3>📸 취약점 스캔 이미지 업로드</h3>
             <form id="uploadForm">
-                <input type="file" id="imageFile" accept="image/*" required>
-                <br>
+                <div style="margin-bottom: 20px;">
+                    <label for="websiteUrl" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50;">🌐 분석 대상 웹사이트 주소:</label>
+                    <input type="url" id="websiteUrl" placeholder="https://example.com" style="width: 100%; padding: 12px; border: 2px solid #3498db; border-radius: 4px; font-size: 16px;" required>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label for="imageFile" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50;">📸 취약점 진단 이미지:</label>
+                    <input type="file" id="imageFile" accept="image/*" required style="width: 100%; padding: 12px; border: 2px solid #3498db; border-radius: 4px; font-size: 16px;">
+                </div>
                 <button type="submit" id="analyzeBtn">🚀 분석 시작</button>
             </form>
             <div id="loading" class="loading" style="display: none;">🔄 분석 중입니다. 잠시만 기다려주세요...</div>
@@ -68,6 +75,12 @@ HTML_FORM = """
 
         <div class="reports-list">
             <h3>📊 최근 분석 보고서</h3>
+            <div style="margin-bottom: 20px;">
+                <label for="websiteFilter" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50;">🌐 웹사이트별 필터:</label>
+                <select id="websiteFilter" style="width: 100%; padding: 10px; border: 2px solid #3498db; border-radius: 4px; font-size: 14px;" onchange="filterReports()">
+                    <option value="">전체 웹사이트</option>
+                </select>
+            </div>
             <div id="reportsList">로딩 중...</div>
         </div>
 
@@ -77,6 +90,7 @@ HTML_FORM = """
             <p><strong>GET /api/vuln/report/:id</strong> - 분석 결과 조회</p>
             <p><strong>GET /api/vuln/reports</strong> - 보고서 목록 조회</p>
             <p><strong>DELETE /api/vuln/report/:id</strong> - 보고서 삭제</p>
+            <p><strong>GET /api/vuln/report/:id/pdf</strong> - PDF 보고서 다운로드</p>
         </div>
     </div>
 
@@ -84,10 +98,16 @@ HTML_FORM = """
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const websiteUrlInput = document.getElementById('websiteUrl');
             const fileInput = document.getElementById('imageFile');
             const analyzeBtn = document.getElementById('analyzeBtn');
             const loading = document.getElementById('loading');
             const result = document.getElementById('result');
+            
+            if (!websiteUrlInput.value.trim()) {
+                alert('웹사이트 주소를 입력해주세요.');
+                return;
+            }
             
             if (!fileInput.files[0]) {
                 alert('파일을 선택해주세요.');
@@ -100,6 +120,7 @@ HTML_FORM = """
             
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
+            formData.append('website_url', websiteUrlInput.value.trim());
             
             try {
                 const response = await fetch('/api/vuln/analyze', {
@@ -129,28 +150,82 @@ HTML_FORM = """
             }
         });
         
+        let allReports = [];
+        
         async function loadReports() {
             try {
-                const response = await fetch('/api/vuln/reports?limit=5');
+                const response = await fetch('/api/vuln/reports?limit=50');
                 const data = await response.json();
                 
-                const reportsList = document.getElementById('reportsList');
-                
                 if (data.reports && data.reports.length > 0) {
-                    reportsList.innerHTML = data.reports.map(report => `
-                        <div class="report-item">
-                            <strong>📋 보고서 ID:</strong> ${report.report_id}<br>
-                            <strong>📁 파일:</strong> ${report.image_filename}<br>
-                            <strong>🔍 취약점 수:</strong> ${report.vulnerability_count}<br>
-                            <strong>📅 생성일:</strong> ${new Date(report.created_at).toLocaleString()}<br>
-                            <a href="/reports/${report.report_id}" style="color: #3498db;">보고서 보기</a>
-                        </div>
-                    `).join('');
+                    allReports = data.reports;
+                    updateWebsiteFilter();
+                    displayReports(allReports);
                 } else {
-                    reportsList.innerHTML = '<p>아직 분석된 보고서가 없습니다.</p>';
+                    document.getElementById('reportsList').innerHTML = '<p>아직 분석된 보고서가 없습니다.</p>';
                 }
             } catch (error) {
                 document.getElementById('reportsList').innerHTML = '<p style="color: red;">보고서 목록을 불러올 수 없습니다.</p>';
+            }
+        }
+        
+        function updateWebsiteFilter() {
+            const websiteFilter = document.getElementById('websiteFilter');
+            const websites = [...new Set(allReports.map(report => report.website_url).filter(url => url))];
+            
+            // 기존 옵션 제거 (전체 웹사이트 제외)
+            while (websiteFilter.children.length > 1) {
+                websiteFilter.removeChild(websiteFilter.lastChild);
+            }
+            
+            // 웹사이트 옵션 추가
+            websites.forEach(website => {
+                const option = document.createElement('option');
+                option.value = website;
+                option.textContent = website;
+                websiteFilter.appendChild(option);
+            });
+        }
+        
+        function filterReports() {
+            const selectedWebsite = document.getElementById('websiteFilter').value;
+            const filteredReports = selectedWebsite 
+                ? allReports.filter(report => report.website_url === selectedWebsite)
+                : allReports;
+            
+            displayReports(filteredReports);
+        }
+        
+        function displayReports(reports) {
+            const reportsList = document.getElementById('reportsList');
+            
+            if (reports.length > 0) {
+                reportsList.innerHTML = reports.map(report => {
+                    // 서울 시간으로 변환
+                    const seoulTime = new Date(report.created_at).toLocaleString('ko-KR', {
+                        timeZone: 'Asia/Seoul',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    
+                    return `
+                        <div class="report-item">
+                            <strong>🌐 웹사이트:</strong> ${report.website_url || 'N/A'}<br>
+                            <strong>🔍 취약점 수:</strong> ${report.vulnerability_count}<br>
+                            <strong>📅 생성일:</strong> ${seoulTime}<br>
+                            <div style="margin-top: 10px;">
+                                <a href="/reports/${report.report_id}" style="color: #3498db; margin-right: 15px;">📊 보고서 보기</a>
+                                <a href="/api/vuln/report/${report.report_id}/pdf" style="color: #e74c3c; text-decoration: none; padding: 5px 10px; background-color: #e74c3c; color: white; border-radius: 4px;">📄 PDF 다운로드</a>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                reportsList.innerHTML = '<p>해당 웹사이트의 분석 보고서가 없습니다.</p>';
             }
         }
         
@@ -179,8 +254,13 @@ def vuln_analyze():
         if not allowed_file(file.filename):
             return jsonify({"error": "지원하지 않는 파일 형식입니다"}), 400
         
+        # 웹사이트 URL 체크
+        website_url = request.form.get('website_url', '').strip()
+        if not website_url:
+            return jsonify({"error": "웹사이트 주소를 입력해주세요"}), 400
+        
         # 새로운 VulnService를 사용하여 보고서 생성
-        report_id = create_report(file)
+        report_id = create_report(file, website_url)
         
         return jsonify({"reportId": report_id}), 200
         
@@ -272,6 +352,37 @@ def uploaded_file(filename):
     except Exception as e:
         return jsonify({"error": f"이미지를 찾을 수 없습니다: {str(e)}"}), 404
 
+@app.route('/api/vuln/report/<report_id>/pdf', methods=['GET'])
+def download_pdf_report(report_id):
+    """PDF 보고서 다운로드"""
+    try:
+        # PDF 생성
+        pdf_path = generate_pdf_report(report_id)
+        
+        # 파일명 추출
+        pdf_filename = os.path.basename(pdf_path)
+        
+        # PDF 파일 다운로드
+        from flask import send_file
+        return send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name=pdf_filename,
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        return jsonify({"error": f"PDF 생성 실패: {str(e)}"}), 500
+
+@app.route('/pdf_reports/<filename>')
+def download_pdf(filename):
+    """생성된 PDF 파일 다운로드"""
+    try:
+        from flask import send_from_directory
+        return send_from_directory('pdf_reports', filename)
+    except Exception as e:
+        return jsonify({"error": f"PDF 파일을 찾을 수 없습니다: {str(e)}"}), 404
+
 @app.route('/', methods=['GET'])
 def home():
     """메인 페이지 - 취약점 진단 시스템"""
@@ -296,13 +407,15 @@ def view_report(report_id):
         # 최종 보고서 생성 (이미지 파일명 포함)
         target_system = "웹 애플리케이션"
         image_filename = report_items.get('image_filename', 'unknown.jpg')
+        website_url = report_items.get('website_url', '')
         
         # report_generator를 직접 호출하여 이미지 파일명 전달
         from report_generator import generate_final_report
         final_report = generate_final_report(
             vuln_list=vulnerabilities,
             target_system=target_system,
-            image_filename=image_filename
+            image_filename=image_filename,
+            website_url=website_url
         )
         
         # Markdown을 간단한 HTML로 변환
@@ -326,15 +439,14 @@ def view_report(report_id):
                 processed_lines.append(f'<h3>{line[4:]}</h3>')
             elif line.startswith('---'):
                 processed_lines.append('<hr>')
+
             elif line.startswith('![') and '](' in line:
-                # 이미지 태그 처리 - 업로드된 취약점 진단 이미지를 실제로 표시
+                # Markdown 이미지 태그를 HTML로 변환 - 실제 업로드된 이미지 표시
                 import re
-                # 더 유연한 정규식 패턴 사용
                 img_match = re.search(r'!\[([^\]]*)\]\(([^)]+)\)', line)
                 if img_match:
                     alt_text = img_match.group(1)
                     img_src = img_match.group(2)
-                    # 이미지를 실제로 표시하는 HTML 태그 생성
                     processed_lines.append(f'''
                     <div style="text-align: center; margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
                         <h4 style="color: #2c3e50; margin-bottom: 15px;">📸 취약점 진단 이미지</h4>
@@ -566,10 +678,12 @@ def view_report(report_id):
                 <div class="report-header">
                     <h1>🔒 웹 취약점 종합 보고서</h1>
                     <div class="report-id">보고서 ID: {report_id}</div>
+                    <div class="website-url" style="margin-top: 10px; font-size: 1.1em; opacity: 0.9;">🌐 분석 대상: {website_url if website_url else 'N/A'}</div>
                 </div>
                 
                 <div class="download-link">
-                    <a href="/api/vuln/report/{report_id}/final" target="_blank">📄 Markdown 보고서 다운로드</a>
+                    <a href="/api/vuln/report/{report_id}/final" target="_blank" style="margin-right: 15px;">📄 Markdown 보고서 다운로드</a>
+                    <a href="/api/vuln/report/{report_id}/pdf" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">📋 PDF 보고서 다운로드</a>
                 </div>
                 
                 <div class="section-divider"></div>

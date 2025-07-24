@@ -21,12 +21,13 @@ class VulnService:
         self.rds_database = os.getenv("RDS_DATABASE", "saju")
         self.llm_client = LLMClient()
     
-    def create_report(self, file) -> str:
+    def create_report(self, file, website_url: str = None) -> str:
         """
         취약점 분석 보고서 생성
         
         Args:
             file: 업로드된 이미지 파일 객체
+            website_url: 분석 대상 웹사이트 URL
             
         Returns:
             str: 생성된 report_id
@@ -48,7 +49,7 @@ class VulnService:
             filename = self._save_uploaded_file(file, report_id)
             
             # 4. DB에 각 취약점 정보 저장
-            self._save_vuln_reports_to_db(report_id, vuln_list, filename)
+            self._save_vuln_reports_to_db(report_id, vuln_list, filename, website_url)
             
             return report_id
             
@@ -110,7 +111,7 @@ class VulnService:
         except Exception as e:
             raise Exception(f"파일 저장 실패: {str(e)}")
     
-    def _save_vuln_reports_to_db(self, report_id: str, vuln_list: List[Dict], filename: str):
+    def _save_vuln_reports_to_db(self, report_id: str, vuln_list: List[Dict], filename: str, website_url: str = None):
         """
         취약점 분석 결과를 DB에 저장
         
@@ -118,6 +119,7 @@ class VulnService:
             report_id: 보고서 ID
             vuln_list: 취약점 분석 결과 배열
             filename: 저장된 이미지 파일명
+            website_url: 분석 대상 웹사이트 URL
         """
         try:
             conn = pymysql.connect(
@@ -132,8 +134,8 @@ class VulnService:
                     # 각 취약점을 개별 레코드로 저장
                     cursor.execute("""
                         INSERT INTO vuln_reports 
-                        (report_id, vuln_id, type, incidents, risk, management, metacognition, image_filename, created_at) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        (report_id, vuln_id, type, incidents, risk, management, metacognition, image_filename, website_url, created_at) 
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         report_id,
                         item.get('id', 'VULN-UNKNOWN'),
@@ -143,6 +145,7 @@ class VulnService:
                         json.dumps(item.get('management', {})),
                         item.get('metacognition', ''),
                         filename,
+                        website_url,
                         datetime.now()
                     ))
                 
@@ -173,7 +176,7 @@ class VulnService:
             
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    SELECT report_id, vuln_id, type, incidents, risk, management, metacognition, image_filename, created_at
+                    SELECT report_id, vuln_id, type, incidents, risk, management, metacognition, image_filename, website_url, created_at
                     FROM vuln_reports 
                     WHERE report_id = %s
                     ORDER BY created_at
@@ -190,7 +193,8 @@ class VulnService:
             report_data = {
                 "report_id": report_id,
                 "image_filename": rows[0][7],  # image_filename
-                "created_at": rows[0][8].isoformat() if rows[0][8] else None,  # created_at
+                "website_url": rows[0][8],     # website_url
+                "created_at": rows[0][9].isoformat() if rows[0][9] else None,  # created_at
                 "vulnerabilities": []
             }
             
@@ -230,9 +234,9 @@ class VulnService:
             
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    SELECT DISTINCT report_id, image_filename, created_at, COUNT(*) as vuln_count
+                    SELECT DISTINCT report_id, image_filename, website_url, created_at, COUNT(*) as vuln_count
                     FROM vuln_reports 
-                    GROUP BY report_id, image_filename, created_at
+                    GROUP BY report_id, image_filename, website_url, created_at
                     ORDER BY created_at DESC
                     LIMIT %s
                 """, (limit,))
@@ -246,8 +250,9 @@ class VulnService:
                 report = {
                     "report_id": row[0],
                     "image_filename": row[1],
-                    "created_at": row[2].isoformat() if row[2] else None,
-                    "vulnerability_count": row[3]
+                    "website_url": row[2],
+                    "created_at": row[3].isoformat() if row[3] else None,
+                    "vulnerability_count": row[4]
                 }
                 reports.append(report)
             
@@ -346,9 +351,9 @@ vuln_service = VulnService()
 
 
 # 편의 함수들
-def create_report(file) -> str:
+def create_report(file, website_url: str = None) -> str:
     """보고서 생성 편의 함수"""
-    return vuln_service.create_report(file)
+    return vuln_service.create_report(file, website_url)
 
 
 def get_report(report_id: str) -> Optional[Dict]:

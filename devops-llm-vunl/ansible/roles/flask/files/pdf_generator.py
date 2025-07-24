@@ -272,9 +272,14 @@ class PDFGenerator:
                 if img_match:
                     alt_text = img_match.group(1)
                     img_src = img_match.group(2)
-                    # 상대 경로를 절대 경로로 변환
+                    # PDF용 절대 경로로 변환
                     if img_src.startswith('/uploads/'):
-                        img_src = os.path.abspath(img_src[1:])  # /uploads/ 제거하고 절대 경로로
+                        # 현재 작업 디렉토리 기준으로 절대 경로 생성
+                        current_dir = os.getcwd()
+                        img_src = os.path.join(current_dir, img_src[1:])  # /uploads/ 제거
+                        # 파일 존재 확인
+                        if not os.path.exists(img_src):
+                            img_src = "file://" + img_src
                     
                     html_lines.append(f'''
                     <div class="image-container">
@@ -345,12 +350,9 @@ class PDFGenerator:
             # 폰트 설정
             font_config = FontConfiguration()
             
-            # HTML을 PDF로 변환
-            html_doc = HTML(string=html_content)
-            html_doc.write_pdf(
-                pdf_path,
-                font_config=font_config
-            )
+            # HTML을 PDF로 변환 (더 안전한 방법)
+            html_doc = HTML(string=html_content, base_url=os.getcwd())
+            html_doc.write_pdf(pdf_path, font_config=font_config)
             
         except Exception as e:
             raise Exception(f"PDF 변환 실패: {str(e)}")

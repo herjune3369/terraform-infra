@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+import pytz
 from typing import List, Dict, Optional
 
 
@@ -27,7 +28,9 @@ def generate_final_report(
     if not vuln_list:
         return "# ❌ 취약점 데이터가 없습니다.\n\n분석할 취약점이 발견되지 않았습니다."
     
-    today = datetime.now().strftime("%Y-%m-%d")
+    # 서울 시간으로 설정
+    seoul_tz = pytz.timezone('Asia/Seoul')
+    today = datetime.now(seoul_tz).strftime("%Y-%m-%d %H:%M:%S")
     
     # 1. 보고서 개요
     report = f"""# ▶ 웹 취약점 종합 보고서
@@ -37,7 +40,6 @@ def generate_final_report(
 * **작성일**: {today}
 * **작성자/팀**: {author}
 * **대상 시스템**: {target_system}
-* **분석 대상 웹사이트**: {website_url if website_url else "N/A"}
 * **진단 이미지**: {image_filename}
 * **보고 목적**: 진단된 취약점을 통해 조직원의 보안정책 준수 의지를 강화하고, 보호동기 이론(PMT) 기반 실행 전략을 제시
 
@@ -63,31 +65,31 @@ def generate_final_report(
         # OWASP Top 10 2025 카테고리 매핑
         vuln_type_lower = vuln_type.lower()
         if any(keyword in vuln_type_lower for keyword in ['sql injection', '인젝션', 'sql']):
-            owasp_category = "A03:2025 - Injection"
+            owasp_category = "A03:2025 - 인젝션 (Injection)"
             cve_cwe = "CWE-89"
         elif any(keyword in vuln_type_lower for keyword in ['xss', '크로스사이트', '스크립트']):
-            owasp_category = "A03:2025 - Injection"
+            owasp_category = "A03:2025 - 인젝션 (Injection)"
             cve_cwe = "CWE-79"
         elif any(keyword in vuln_type_lower for keyword in ['csrf', '위조', '요청']):
-            owasp_category = "A01:2025 - Broken Access Control"
+            owasp_category = "A01:2025 - 접근 제어 취약점 (Broken Access Control)"
             cve_cwe = "CWE-352"
         elif any(keyword in vuln_type_lower for keyword in ['인증', 'authentication', '로그인']):
-            owasp_category = "A07:2025 - Identification and Authentication Failures"
+            owasp_category = "A07:2025 - 식별 및 인증 실패 (Auth Failures)"
             cve_cwe = "CWE-287"
         elif any(keyword in vuln_type_lower for keyword in ['세션', 'session']):
-            owasp_category = "A02:2025 - Cryptographic Failures"
+            owasp_category = "A02:2025 - 암호화 실패 (Cryptographic Failures)"
             cve_cwe = "CWE-384"
         elif any(keyword in vuln_type_lower for keyword in ['업로드', '파일', 'file upload']):
-            owasp_category = "A01:2025 - Broken Access Control"
+            owasp_category = "A01:2025 - 접근 제어 취약점 (Broken Access Control)"
             cve_cwe = "CWE-434"
         elif any(keyword in vuln_type_lower for keyword in ['경로', '순회', 'path traversal']):
-            owasp_category = "A01:2025 - Broken Access Control"
+            owasp_category = "A01:2025 - 접근 제어 취약점 (Broken Access Control)"
             cve_cwe = "CWE-22"
         elif any(keyword in vuln_type_lower for keyword in ['정보', '노출', 'information disclosure']):
-            owasp_category = "A05:2025 - Security Misconfiguration"
+            owasp_category = "A05:2025 - 보안 설정 오류 (Security Misconfiguration)"
             cve_cwe = "CWE-200"
         elif any(keyword in vuln_type_lower for keyword in ['설정', 'configuration', '보안']):
-            owasp_category = "A05:2025 - Security Misconfiguration"
+            owasp_category = "A05:2025 - 보안 설정 오류 (Security Misconfiguration)"
             cve_cwe = "CWE-16"
         else:
             owasp_category = "기타 취약점"
@@ -146,7 +148,7 @@ def generate_final_report(
         report += f"| {category} | {count}개 |\n"
     
     report += "\n---\n\n## 3. 취약점별 위험성 및 유사 해킹 사고 사례\n\n"
-    report += "각 취약점에 대해 \"위험성(5줄 이상)\"과 \"유사 해킹 사고 사례(1건, 5줄 이상)\"를 한 묶음으로 정리했습니다.\n\n"
+
     
     # 3. 취약점별 위험성 및 유사 해킹 사고 사례
     for vuln in vuln_list:

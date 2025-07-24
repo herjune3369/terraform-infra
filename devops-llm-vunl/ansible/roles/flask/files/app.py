@@ -447,6 +447,12 @@ def view_report(report_id):
                 if img_match:
                     alt_text = img_match.group(1)
                     img_src = img_match.group(2)
+                    # /uploads/ 경로를 올바른 URL로 변환
+                    if img_src.startswith('/uploads/'):
+                        img_src = img_src  # 이미 올바른 경로
+                    else:
+                        img_src = f'/uploads/{img_src}'
+                    
                     processed_lines.append(f'''
                     <div style="text-align: center; margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
                         <h4 style="color: #2c3e50; margin-bottom: 15px;">📸 취약점 진단 이미지</h4>

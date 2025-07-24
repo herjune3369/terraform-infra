@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-import pytz
 from typing import List, Dict, Optional
 
 
@@ -28,9 +27,8 @@ def generate_final_report(
     if not vuln_list:
         return "# ❌ 취약점 데이터가 없습니다.\n\n분석할 취약점이 발견되지 않았습니다."
     
-    # 서울 시간으로 설정
-    seoul_tz = pytz.timezone('Asia/Seoul')
-    today = datetime.now(seoul_tz).strftime("%Y-%m-%d %H:%M:%S")
+    # 기본 시간 사용 (UTC)
+    today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # 1. 보고서 개요
     report = f"""# ▶ 웹 취약점 종합 보고서

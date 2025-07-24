@@ -415,17 +415,18 @@ def view_report(report_id):
                 if img_match:
                     alt_text = img_match.group(1)
                     img_src = img_match.group(2)
-                    # /uploads/ 경로를 올바른 URL로 변환
-                    if img_src.startswith('/uploads/'):
-                        img_src = img_src  # 이미 올바른 경로
-                    else:
+                    
+                    # 간단한 이미지 경로 처리
+                    if not img_src.startswith('/uploads/'):
                         img_src = f'/uploads/{img_src}'
                     
                     processed_lines.append(f'''
                     <div style="text-align: center; margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
                         <h4 style="color: #2c3e50; margin-bottom: 15px;">📸 취약점 진단 이미지</h4>
-                        <img src="{img_src}" alt="{alt_text}" style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <img src="{img_src}" alt="{alt_text}" style="max-width: 100%; height: auto; border: 2px solid #3498db; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" onerror="console.log('이미지 로드 실패:', this.src); this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <p style="margin-top: 10px; color: #e74c3c; font-style: italic; display: none;">⚠️ 이미지를 불러올 수 없습니다: {img_src}</p>
                         <p style="margin-top: 10px; color: #7f8c8d; font-style: italic;">이미지에서 발견된 취약점들을 AI가 분석하여 본 보고서를 생성했습니다.</p>
+                        <p style="margin-top: 5px; color: #95a5a6; font-size: 12px;">이미지 경로: {img_src}</p>
                     </div>
                     ''')
                 else:

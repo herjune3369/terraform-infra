@@ -93,6 +93,56 @@ def generate_final_report(
         
         report += f"| {owasp_category} | {vuln_type} | {cve_cwe} |\n"
     
+    # OWASP Top 10 2025 웹 취약점 요약 표 추가
+    report += "\n### OWASP Top 10 2025 웹 취약점 요약\n\n"
+    report += "| OWASP 카테고리 | 발견 개수 |\n"
+    report += "| ------------ | -------- |\n"
+    
+    # OWASP 카테고리별 개수 계산
+    owasp_summary = {
+        'A01:2025 - 접근 제어 취약점 (Broken Access Control)': 0,
+        'A02:2025 - 암호화 실패 (Cryptographic Failures)': 0,
+        'A03:2025 - 인젝션 (Injection)': 0,
+        'A04:2025 - 안전하지 않은 설계 (Insecure Design)': 0,
+        'A05:2025 - 보안 설정 오류 (Security Misconfiguration)': 0,
+        'A06:2025 - 취약하고 오래된 구성요소 (Vulnerable Components)': 0,
+        'A07:2025 - 식별 및 인증 실패 (Auth Failures)': 0,
+        'A08:2025 - 소프트웨어 및 데이터 무결성 실패 (Integrity Failures)': 0,
+        'A09:2025 - 보안 로깅 및 모니터링 실패 (Logging Failures)': 0,
+        'A10:2025 - 서버 사이드 요청 위조 (SSRF)': 0
+    }
+    
+    # 각 취약점을 OWASP 카테고리로 분류하여 개수 계산
+    for vuln in vuln_list:
+        vuln_type = vuln.get('type', '').lower()
+        
+        if any(keyword in vuln_type for keyword in ['sql injection', '인젝션', 'nosql injection', 'ldap injection']):
+            owasp_summary['A03:2025 - 인젝션 (Injection)'] += 1
+        elif any(keyword in vuln_type for keyword in ['xss', '크로스사이트', 'cross-site scripting']):
+            owasp_summary['A03:2025 - 인젝션 (Injection)'] += 1
+        elif any(keyword in vuln_type for keyword in ['경로 순회', 'path traversal', 'directory traversal']):
+            owasp_summary['A01:2025 - 접근 제어 취약점 (Broken Access Control)'] += 1
+        elif any(keyword in vuln_type for keyword in ['파일 업로드', 'file upload', 'unrestricted file upload']):
+            owasp_summary['A01:2025 - 접근 제어 취약점 (Broken Access Control)'] += 1
+        elif any(keyword in vuln_type for keyword in ['인증', 'authentication', '로그인', 'login', '세션', 'session']):
+            owasp_summary['A07:2025 - 식별 및 인증 실패 (Auth Failures)'] += 1
+        elif any(keyword in vuln_type for keyword in ['csrf', 'cross-site request forgery', '사이트 간 요청 위조']):
+            owasp_summary['A01:2025 - 접근 제어 취약점 (Broken Access Control)'] += 1
+        elif any(keyword in vuln_type for keyword in ['정보 노출', 'information disclosure', '디버그', 'debug', '에러', 'error']):
+            owasp_summary['A05:2025 - 보안 설정 오류 (Security Misconfiguration)'] += 1
+        elif any(keyword in vuln_type for keyword in ['설정', 'configuration', '보안 설정', 'security config']):
+            owasp_summary['A05:2025 - 보안 설정 오류 (Security Misconfiguration)'] += 1
+        elif any(keyword in vuln_type for keyword in ['구성요소', 'component', '라이브러리', 'library', '버전', 'version']):
+            owasp_summary['A06:2025 - 취약하고 오래된 구성요소 (Vulnerable Components)'] += 1
+        elif any(keyword in vuln_type for keyword in ['암호화', 'encryption', 'ssl', 'tls', 'https']):
+            owasp_summary['A06:2025 - 취약하고 오래된 구성요소 (Vulnerable Components)'] += 1
+        elif any(keyword in vuln_type for keyword in ['로깅', 'logging', '모니터링', 'monitoring']):
+            owasp_summary['A09:2025 - 보안 로깅 및 모니터링 실패 (Logging Failures)'] += 1
+    
+    # OWASP 요약 표 생성
+    for category, count in owasp_summary.items():
+        report += f"| {category} | {count}개 |\n"
+    
     report += "\n---\n\n## 3. 취약점별 위험성 및 유사 해킹 사고 사례\n\n"
     report += "각 취약점에 대해 \"위험성(5줄 이상)\"과 \"유사 해킹 사고 사례(1건, 5줄 이상)\"를 한 묶음으로 정리했습니다.\n\n"
     
@@ -191,7 +241,8 @@ def generate_final_report(
                 owasp_vulns.append(vuln.get('type', ''))
         
         # OWASP Top 10 2025에 분류된 실제 취약점 개수 계산
-        owasp_vuln_count = sum(len(category) for category in owasp_categories.values())
+        # 모든 웹 취약점은 OWASP Top 10 2025에 해당하므로 total_vulns와 동일
+        owasp_vuln_count = total_vulns
         
         # 위험성 등급 결정 (OWASP Top 10 기준)
         if owasp_vuln_count >= 3:
@@ -536,20 +587,7 @@ def generate_final_report(
         if medium_severity_count > 0:
             report += f"* 중간 심각도: {medium_severity_count}개\n"
         
-        # OWASP Top 10 2025 웹 취약점 유형별 요약 (정확한 카테고리별 분류)
-        report += f"**OWASP Top 10 2025 웹 취약점**:\n"
-        report += f"* A01:2025 - 접근 제어 취약점 (Broken Access Control): {len(owasp_categories['A01:2025-Broken Access Control'])}개\n"
-        report += f"* A02:2025 - 암호화 실패 (Cryptographic Failures): {len(owasp_categories['A02:2025-Cryptographic Failures'])}개\n"
-        report += f"* A03:2025 - 인젝션 (Injection): {len(owasp_categories['A03:2025-Injection'])}개\n"
-        report += f"* A04:2025 - 안전하지 않은 설계 (Insecure Design): {len(owasp_categories['A04:2025-Insecure Design'])}개\n"
-        report += f"* A05:2025 - 보안 설정 오류 (Security Misconfiguration): {len(owasp_categories['A05:2025-Security Misconfiguration'])}개\n"
-        report += f"* A06:2025 - 취약하고 오래된 구성요소 (Vulnerable Components): {len(owasp_categories['A06:2025-Vulnerable and Outdated Components'])}개\n"
-        report += f"* A07:2025 - 식별 및 인증 실패 (Auth Failures): {len(owasp_categories['A07:2025-Identification and Authentication Failures'])}개\n"
-        report += f"* A08:2025 - 소프트웨어 및 데이터 무결성 실패 (Integrity Failures): {len(owasp_categories['A08:2025-Software and Data Integrity Failures'])}개\n"
-        report += f"* A09:2025 - 보안 로깅 및 모니터링 실패 (Logging Failures): {len(owasp_categories['A09:2025-Security Logging and Monitoring Failures'])}개\n"
-        report += f"* A10:2025 - 서버 사이드 요청 위조 (SSRF): {len(owasp_categories['A10:2025-Server-Side Request Forgery (SSRF)'])}개\n"
-        
-        report += "\n"
+
         
         report += f"**위험성 평가**: {risk_description}\n\n"
         report += f"**비즈니스 영향도**: {business_impact}\n\n"

@@ -5,7 +5,6 @@ from werkzeug.utils import secure_filename
 import uuid
 from datetime import datetime
 from vulnService import create_report, get_report, list_reports, delete_report, generate_final_report_md
-from pdf_generator import generate_pdf_report
 
 # 환경변수 로딩
 load_dotenv()
@@ -90,7 +89,6 @@ HTML_FORM = """
             <p><strong>GET /api/vuln/report/:id</strong> - 분석 결과 조회</p>
             <p><strong>GET /api/vuln/reports</strong> - 보고서 목록 조회</p>
             <p><strong>DELETE /api/vuln/report/:id</strong> - 보고서 삭제</p>
-            <p><strong>GET /api/vuln/report/:id/pdf</strong> - PDF 보고서 다운로드</p>
         </div>
     </div>
 
@@ -218,8 +216,7 @@ HTML_FORM = """
                             <strong>🔍 취약점 수:</strong> ${report.vulnerability_count}<br>
                             <strong>📅 생성일:</strong> ${seoulTime}<br>
                             <div style="margin-top: 10px;">
-                                <a href="/reports/${report.report_id}" style="color: #3498db; margin-right: 15px;">📊 보고서 보기</a>
-                                <a href="/api/vuln/report/${report.report_id}/pdf" style="color: #e74c3c; text-decoration: none; padding: 5px 10px; background-color: #e74c3c; color: white; border-radius: 4px;">📄 PDF 다운로드</a>
+                                <a href="/reports/${report.report_id}" style="color: #3498db;">📊 보고서 보기</a>
                             </div>
                         </div>
                     `;
@@ -352,36 +349,7 @@ def uploaded_file(filename):
     except Exception as e:
         return jsonify({"error": f"이미지를 찾을 수 없습니다: {str(e)}"}), 404
 
-@app.route('/api/vuln/report/<report_id>/pdf', methods=['GET'])
-def download_pdf_report(report_id):
-    """PDF 보고서 다운로드"""
-    try:
-        # PDF 생성
-        pdf_path = generate_pdf_report(report_id)
-        
-        # 파일명 추출
-        pdf_filename = os.path.basename(pdf_path)
-        
-        # PDF 파일 다운로드
-        from flask import send_file
-        return send_file(
-            pdf_path,
-            as_attachment=True,
-            download_name=pdf_filename,
-            mimetype='application/pdf'
-        )
-        
-    except Exception as e:
-        return jsonify({"error": f"PDF 생성 실패: {str(e)}"}), 500
 
-@app.route('/pdf_reports/<filename>')
-def download_pdf(filename):
-    """생성된 PDF 파일 다운로드"""
-    try:
-        from flask import send_from_directory
-        return send_from_directory('pdf_reports', filename)
-    except Exception as e:
-        return jsonify({"error": f"PDF 파일을 찾을 수 없습니다: {str(e)}"}), 404
 
 @app.route('/', methods=['GET'])
 def home():
@@ -688,8 +656,7 @@ def view_report(report_id):
                 </div>
                 
                 <div class="download-link">
-                    <a href="/api/vuln/report/{report_id}/final" target="_blank" style="margin-right: 15px;">📄 Markdown 보고서 다운로드</a>
-                    <a href="/api/vuln/report/{report_id}/pdf" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">📋 PDF 보고서 다운로드</a>
+                    <a href="/api/vuln/report/{report_id}/final" target="_blank">📄 Markdown 보고서 다운로드</a>
                 </div>
                 
                 <div class="section-divider"></div>

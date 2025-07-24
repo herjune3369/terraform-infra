@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 import pymysql
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from llm_client import LLMClient
@@ -146,7 +146,7 @@ class VulnService:
                         item.get('metacognition', ''),
                         filename,
                         website_url,
-                        datetime.now()
+                        datetime.now(timezone(timedelta(hours=9)))  # 서울시간 (UTC+9)
                     ))
                 
                 conn.commit()

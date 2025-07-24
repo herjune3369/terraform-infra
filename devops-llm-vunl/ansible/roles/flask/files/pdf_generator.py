@@ -346,7 +346,8 @@ class PDFGenerator:
             font_config = FontConfiguration()
             
             # HTML을 PDF로 변환
-            HTML(string=html_content).write_pdf(
+            html_doc = HTML(string=html_content)
+            html_doc.write_pdf(
                 pdf_path,
                 font_config=font_config
             )

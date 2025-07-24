@@ -30,6 +30,7 @@
       requests
       pymysql
       python-dotenv
+      weasyprint==60.2
     owner: ubuntu
     group: ubuntu
     mode: '0644'
@@ -131,6 +132,14 @@
   copy:
     src: report_generator.py
     dest: /home/ubuntu/myapp/report_generator.py
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Copy pdf_generator.py
+  copy:
+    src: pdf_generator.py
+    dest: /home/ubuntu/myapp/pdf_generator.py
     owner: ubuntu
     group: ubuntu
     mode: '0644'

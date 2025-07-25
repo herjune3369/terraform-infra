@@ -882,7 +882,7 @@ def view_report(report_id):
                 let chatHistory = [];
                 
                 // 메시지 전송
-                async function sendMessage() {
+                async function sendMessage() {{
                     const chatInput = document.getElementById('chatInput');
                     const message = chatInput.value.trim();
                     
@@ -892,34 +892,34 @@ def view_report(report_id):
                     addMessage('user', message);
                     chatInput.value = '';
                     
-                    try {
-                        const response = await fetch('/api/chat', {
+                    try {{
+                        const response = await fetch('/api/chat', {{
                             method: 'POST',
-                            headers: {
+                            headers: {{
                                 'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
+                            }},
+                            body: JSON.stringify({{
                                 report_id: currentReportId,
                                 message: message,
                                 chat_history: chatHistory
-                            })
-                        });
+                            }})
+                        }});
                         
                         const data = await response.json();
                         
-                        if (response.ok) {
+                        if (response.ok) {{
                             addMessage('bot', data.answer);
-                            chatHistory.push({user: message, bot: data.answer});
-                        } else {
-                            addMessage('bot', `❌ 오류: ${data.error}`);
-                        }
-                    } catch (error) {
-                        addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
-                    }
-                }
+                            chatHistory.push({{user: message, bot: data.answer}});
+                        }} else {{
+                            addMessage('bot', `❌ 오류: ${{data.error}}`);
+                        }}
+                    }} catch (error) {{
+                        addMessage('bot', `❌ 네트워크 오류: ${{error.message}}`);
+                    }}
+                }}
                 
                 // 메시지 추가
-                function addMessage(sender, message) {
+                function addMessage(sender, message) {{
                     const chatMessages = document.getElementById('chatMessages');
                     const messageDiv = document.createElement('div');
                     messageDiv.style.marginBottom = '10px';
@@ -927,80 +927,80 @@ def view_report(report_id):
                     messageDiv.style.borderRadius = '8px';
                     messageDiv.style.maxWidth = '80%';
                     
-                    if (sender === 'user') {
+                    if (sender === 'user') {{
                         messageDiv.style.backgroundColor = '#3498db';
                         messageDiv.style.color = 'white';
                         messageDiv.style.marginLeft = 'auto';
                         messageDiv.textContent = message;
-                    } else {
+                    }} else {{
                         messageDiv.style.backgroundColor = '#ecf0f1';
                         messageDiv.style.color = '#2c3e50';
                         messageDiv.style.marginRight = 'auto';
                         messageDiv.innerHTML = message.replace(/\\n/g, '<br>');
-                    }
+                    }}
                     
                     chatMessages.appendChild(messageDiv);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
+                }}
                 
                 // 빠른 분석
-                async function quickAnalysis() {
-                    try {
-                        const response = await fetch('/api/chat/quick-analysis', {
+                async function quickAnalysis() {{
+                    try {{
+                        const response = await fetch('/api/chat/quick-analysis', {{
                             method: 'POST',
-                            headers: {
+                            headers: {{
                                 'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
+                            }},
+                            body: JSON.stringify({{
                                 report_id: currentReportId
-                            })
-                        });
+                            }})
+                        }});
                         
                         const data = await response.json();
                         
-                        if (response.ok) {
+                        if (response.ok) {{
                             addMessage('bot', data.analysis);
-                        } else {
-                            addMessage('bot', `❌ 오류: ${data.error}`);
-                        }
-                    } catch (error) {
-                        addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
-                    }
-                }
+                        }} else {{
+                            addMessage('bot', `❌ 오류: ${{data.error}}`);
+                        }}
+                    }} catch (error) {{
+                        addMessage('bot', `❌ 네트워크 오류: ${{error.message}}`);
+                    }}
+                }}
                 
                 // 보안 팁 가져오기
-                async function getSecurityTips() {
-                    try {
+                async function getSecurityTips() {{
+                    try {{
                         const response = await fetch('/api/chat/security-tips');
                         const data = await response.json();
                         
-                        if (response.ok) {
+                        if (response.ok) {{
                             let tipsMessage = '💡 **보안 팁 모음**\\n\\n';
-                            data.tips.forEach((tip, index) => {
-                                tipsMessage += `${index + 1}. **${tip.category}**: ${tip.tip}\\n   ${tip.description}\\n\\n`;
-                            });
+                            data.tips.forEach((tip, index) => {{
+                                tipsMessage += `${{index + 1}}. **${{tip.category}}**: ${{tip.tip}}\\n   ${{tip.description}}\\n\\n`;
+                            }});
                             addMessage('bot', tipsMessage);
-                        } else {
-                            addMessage('bot', `❌ 오류: ${data.error}`);
-                        }
-                    } catch (error) {
-                        addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
-                    }
-                }
+                        }} else {{
+                            addMessage('bot', `❌ 오류: ${{data.error}}`);
+                        }}
+                    }} catch (error) {{
+                        addMessage('bot', `❌ 네트워크 오류: ${{error.message}}`);
+                    }}
+                }}
                 
                 // 대화 초기화
-                function clearChat() {
+                function clearChat() {{
                     const chatMessages = document.getElementById('chatMessages');
                     chatMessages.innerHTML = '<div style="text-align: center; color: #7f8c8d;">챗봇과 대화를 시작하세요! 👋</div>';
                     chatHistory = [];
-                }
+                }}
                 
                 // Enter 키로 메시지 전송
-                document.getElementById('chatInput').addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
+                document.getElementById('chatInput').addEventListener('keypress', function(e) {{
+                    if (e.key === 'Enter') {{
                         sendMessage();
-                    }
-                });
+                    }}
+                }});
             </script>
         </body>
         </html>

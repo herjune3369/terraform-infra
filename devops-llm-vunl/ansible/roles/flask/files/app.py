@@ -340,6 +340,22 @@ def get_final_report(report_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/chat', methods=['POST'])
+def chat_with_report():
+    """챗봇: 테스트용 엔드포인트 (1단계)"""
+    try:
+        data = request.get_json()
+        report_id = data.get('report_id')
+        message = data.get('message')
+        
+        # 간단한 테스트 응답
+        return jsonify({
+            'answer': f'테스트 성공! report_id: {report_id}, message: {message}',
+            'status': 'test_success'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     """업로드된 이미지 파일을 웹에서 볼 수 있도록 제공"""

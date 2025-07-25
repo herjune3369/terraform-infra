@@ -72,6 +72,33 @@ HTML_FORM = """
             <div id="result"></div>
         </div>
 
+        <div class="chatbot-section">
+            <h3>🤖 AI 보안 챗봇</h3>
+            <div style="margin-bottom: 20px;">
+                <label for="reportSelect" style="display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50;">📊 분석할 보고서 선택:</label>
+                <select id="reportSelect" style="width: 100%; padding: 10px; border: 2px solid #3498db; border-radius: 4px; font-size: 14px;" onchange="loadChatbot()">
+                    <option value="">보고서를 선택하세요</option>
+                </select>
+            </div>
+            
+            <div id="chatbotContainer" style="display: none;">
+                <div id="chatMessages" style="height: 300px; border: 1px solid #ddd; padding: 15px; overflow-y: auto; background-color: #f8f9fa; border-radius: 5px; margin-bottom: 15px;">
+                    <div style="text-align: center; color: #7f8c8d;">챗봇과 대화를 시작하세요! 👋</div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="chatInput" placeholder="질문을 입력하세요..." style="flex: 1; padding: 10px; border: 2px solid #3498db; border-radius: 4px; font-size: 14px;">
+                    <button onclick="sendMessage()" style="background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">전송</button>
+                </div>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="quickAnalysis()" style="background-color: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">🔍 빠른 분석</button>
+                    <button onclick="getSecurityTips()" style="background-color: #f39c12; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">💡 보안 팁</button>
+                    <button onclick="clearChat()" style="background-color: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 대화 초기화</button>
+                </div>
+            </div>
+        </div>
+
         <div class="reports-list">
             <h3>📊 최근 분석 보고서</h3>
             <div style="margin-bottom: 20px;">
@@ -89,6 +116,9 @@ HTML_FORM = """
             <p><strong>GET /api/vuln/report/:id</strong> - 분석 결과 조회</p>
             <p><strong>GET /api/vuln/reports</strong> - 보고서 목록 조회</p>
             <p><strong>DELETE /api/vuln/report/:id</strong> - 보고서 삭제</p>
+            <p><strong>POST /api/chat</strong> - AI 챗봇 대화</p>
+            <p><strong>POST /api/chat/quick-analysis</strong> - 빠른 취약점 분석</p>
+            <p><strong>GET /api/chat/security-tips</strong> - 보안 팁 제공</p>
         </div>
     </div>
 
@@ -228,6 +258,177 @@ HTML_FORM = """
         
         // 페이지 로드 시 보고서 목록 불러오기
         loadReports();
+        
+        // 챗봇 관련 변수
+        let currentReportId = null;
+        let chatHistory = [];
+        
+        // 챗봇 초기화
+        function loadChatbot() {
+            const reportSelect = document.getElementById('reportSelect');
+            const chatbotContainer = document.getElementById('chatbotContainer');
+            
+            if (reportSelect.value) {
+                currentReportId = reportSelect.value;
+                chatbotContainer.style.display = 'block';
+                clearChat();
+                addMessage('bot', '안녕하세요! 보안 전문가 챗봇입니다. 취약점 분석에 대해 궁금한 점이 있으시면 언제든 물어보세요! 🔒');
+            } else {
+                chatbotContainer.style.display = 'none';
+                currentReportId = null;
+            }
+        }
+        
+        // 메시지 전송
+        async function sendMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const message = chatInput.value.trim();
+            
+            if (!message || !currentReportId) return;
+            
+            // 사용자 메시지 추가
+            addMessage('user', message);
+            chatInput.value = '';
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        report_id: currentReportId,
+                        message: message,
+                        chat_history: chatHistory
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addMessage('bot', data.answer);
+                    chatHistory.push({user: message, bot: data.answer});
+                } else {
+                    addMessage('bot', `❌ 오류: ${data.error}`);
+                }
+            } catch (error) {
+                addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
+            }
+        }
+        
+        // 메시지 추가
+        function addMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.style.marginBottom = '10px';
+            messageDiv.style.padding = '8px 12px';
+            messageDiv.style.borderRadius = '8px';
+            messageDiv.style.maxWidth = '80%';
+            
+            if (sender === 'user') {
+                messageDiv.style.backgroundColor = '#3498db';
+                messageDiv.style.color = 'white';
+                messageDiv.style.marginLeft = 'auto';
+                messageDiv.textContent = message;
+            } else {
+                messageDiv.style.backgroundColor = '#ecf0f1';
+                messageDiv.style.color = '#2c3e50';
+                messageDiv.style.marginRight = 'auto';
+                messageDiv.innerHTML = message.replace(/\n/g, '<br>');
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 빠른 분석
+        async function quickAnalysis() {
+            if (!currentReportId) {
+                alert('먼저 보고서를 선택해주세요.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/chat/quick-analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        report_id: currentReportId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addMessage('bot', data.analysis);
+                } else {
+                    addMessage('bot', `❌ 오류: ${data.error}`);
+                }
+            } catch (error) {
+                addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
+            }
+        }
+        
+        // 보안 팁 가져오기
+        async function getSecurityTips() {
+            try {
+                const response = await fetch('/api/chat/security-tips');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let tipsMessage = '💡 **보안 팁 모음**\n\n';
+                    data.tips.forEach((tip, index) => {
+                        tipsMessage += `${index + 1}. **${tip.category}**: ${tip.tip}\n   ${tip.description}\n\n`;
+                    });
+                    addMessage('bot', tipsMessage);
+                } else {
+                    addMessage('bot', `❌ 오류: ${data.error}`);
+                }
+            } catch (error) {
+                addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
+            }
+        }
+        
+        // 대화 초기화
+        function clearChat() {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = '<div style="text-align: center; color: #7f8c8d;">챗봇과 대화를 시작하세요! 👋</div>';
+            chatHistory = [];
+        }
+        
+        // 보고서 목록 로드 시 챗봇 선택 옵션도 업데이트
+        function updateReportSelect() {
+            const reportSelect = document.getElementById('reportSelect');
+            
+            // 기존 옵션 제거 (첫 번째 옵션 제외)
+            while (reportSelect.children.length > 1) {
+                reportSelect.removeChild(reportSelect.lastChild);
+            }
+            
+            // 보고서 옵션 추가
+            allReports.forEach(report => {
+                const option = document.createElement('option');
+                option.value = report.report_id;
+                option.textContent = `${report.website_url || 'N/A'} (${report.vulnerability_count}개 취약점)`;
+                reportSelect.appendChild(option);
+            });
+        }
+        
+        // Enter 키로 메시지 전송
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // 기존 loadReports 함수 수정
+        const originalLoadReports = loadReports;
+        loadReports = async function() {
+            await originalLoadReports();
+            updateReportSelect();
+        };
     </script>
 </body>
 </html>

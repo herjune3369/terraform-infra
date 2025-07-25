@@ -340,40 +340,6 @@ def get_final_report(report_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/chat', methods=['POST'])
-def chat_with_report():
-    """챗봇: 보고서 내용 기반 Gemini 답변"""
-    try:
-        data = request.get_json()
-        report_id = data.get('report_id')
-        message = data.get('message')
-        if not report_id or not message:
-            return jsonify({'error': 'report_id와 message가 필요합니다.'}), 400
-        # 보고서 내용 불러오기
-        report_items = get_report(report_id)
-        if not report_items:
-            return jsonify({'error': '해당 report_id의 보고서를 찾을 수 없습니다.'}), 404
-        # 보고서 요약 텍스트 생성
-        vulnerabilities = report_items.get('vulnerabilities', [])
-        website_url = report_items.get('website_url', '')
-        image_filename = report_items.get('image_filename', '')
-        # 간단 요약
-        summary = f"웹사이트: {website_url}\n이미지: {image_filename}\n취약점 수: {len(vulnerabilities)}\n"\
-                  + '\n'.join([f"- {v.get('type','')}" for v in vulnerabilities])
-        # 전체 보고서 텍스트(최대한 압축)
-        from report_generator import generate_final_report
-        report_text = generate_final_report(vuln_list=vulnerabilities, website_url=website_url, image_filename=image_filename)
-        # 프롬프트 구성
-        prompt = f"""
-아래는 웹 취약점 종합보고서입니다. 사용자의 질문에 대해 반드시 보고서 내용을 참고하여 한국어로 답변하세요.\n\n[보고서 요약]\n{summary}\n\n[보고서 전체]\n{report_text}\n\n[사용자 질문]\n{message}\n\n[AI 답변]"""
-        # Gemini 호출
-        from llm_client import LLMClient
-        llm = LLMClient()
-        answer = llm.ask(prompt, lang='ko')
-        return jsonify({'answer': answer})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     """업로드된 이미지 파일을 웹에서 볼 수 있도록 제공"""
@@ -702,70 +668,6 @@ def view_report(report_id):
                     <a href="/">← 메인으로 돌아가기</a>
                 </div>
             </div>
-
-            <!-- 🟡 플로팅 챗봇 버튼 및 챗봇 창 -->
-            <button id="chatbot-fab" style="position:fixed;bottom:32px;right:32px;z-index:9999;width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);color:white;font-size:2.5em;box-shadow:0 8px 24px rgba(231,76,60,0.4);border:none;cursor:pointer;transition:all 0.3s;animation:pulse 2s infinite;">🤖</button>
-            <style>
-            @keyframes pulse {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.1); }
-                100% { transform: scale(1); }
-            }
-            </style>
-            <div id="chatbot-window" style="display:none;position:fixed;bottom:110px;right:32px;width:350px;max-width:90vw;height:500px;z-index:10000;background:white;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.25);border:1.5px solid #667eea;overflow:hidden;flex-direction:column;">
-                <div style="background:linear-gradient(90deg,#667eea 0%,#764ba2 100%);color:white;padding:16px 20px;font-weight:bold;font-size:1.1em;display:flex;align-items:center;justify-content:space-between;">
-                    <span>AI 챗봇에게 질문하기</span>
-                    <button id="chatbot-close" style="background:none;border:none;color:white;font-size:1.3em;cursor:pointer;">✖️</button>
-                </div>
-                <div id="chatbot-messages" style="flex:1;overflow-y:auto;padding:16px;background:#f8f9fa;"></div>
-                <form id="chatbot-form" style="display:flex;padding:12px 10px 10px 10px;background:#f8f9fa;border-top:1px solid #eee;gap:8px;">
-                    <input id="chatbot-input" type="text" placeholder="보고서에 대해 궁금한 점을 입력하세요..." style="flex:1;padding:10px 12px;border-radius:8px;border:1.5px solid #667eea;font-size:1em;outline:none;" autocomplete="off" />
-                    <button type="submit" style="background:#667eea;color:white;border:none;border-radius:8px;padding:0 18px;font-size:1em;cursor:pointer;">전송</button>
-                </form>
-            </div>
-            <script>
-            // report_id를 JS 변수로 전달
-            const REPORT_ID = "{{ report_id }}" || (window.location.pathname.split('/').pop());
-            // 챗봇 열기/닫기
-            const chatbotFab = document.getElementById('chatbot-fab');
-            const chatbotWindow = document.getElementById('chatbot-window');
-            const chatbotClose = document.getElementById('chatbot-close');
-            chatbotFab.onclick = () => chatbotWindow.style.display = 'flex';
-            chatbotClose.onclick = () => chatbotWindow.style.display = 'none';
-            // 챗봇 메시지 전송
-            const chatbotForm = document.getElementById('chatbot-form');
-            const chatbotInput = document.getElementById('chatbot-input');
-            const chatbotMessages = document.getElementById('chatbot-messages');
-            chatbotForm.onsubmit = async (e) => {
-                e.preventDefault();
-                const msg = chatbotInput.value.trim();
-                if(!msg) return;
-                chatbotMessages.innerHTML += `<div style='margin-bottom:10px;text-align:right;'><span style='display:inline-block;background:#667eea;color:white;padding:8px 14px;border-radius:16px 16px 4px 16px;max-width:80%;word-break:break-all;'>${msg}</span></div>`;
-                chatbotInput.value = '';
-                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-                // 로딩 표시
-                chatbotMessages.innerHTML += `<div id='chatbot-loading' style='margin-bottom:10px;text-align:left;'><span style='display:inline-block;background:#e9ecef;color:#333;padding:8px 14px;border-radius:16px 16px 16px 4px;max-width:80%;word-break:break-all;'>[AI] 답변 생성 중...</span></div>`;
-                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-                try {
-                    const res = await fetch('/api/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ report_id: REPORT_ID, message: msg })
-                    });
-                    const data = await res.json();
-                    document.getElementById('chatbot-loading').remove();
-                    if(data.answer) {
-                        chatbotMessages.innerHTML += `<div style='margin-bottom:10px;text-align:left;'><span style='display:inline-block;background:#e9ecef;color:#333;padding:8px 14px;border-radius:16px 16px 16px 4px;max-width:80%;word-break:break-all;'>${data.answer}</span></div>`;
-                    } else {
-                        chatbotMessages.innerHTML += `<div style='margin-bottom:10px;text-align:left;'><span style='display:inline-block;background:#ffe0e0;color:#c0392b;padding:8px 14px;border-radius:16px 16px 16px 4px;max-width:80%;word-break:break-all;'>[AI 오류] ${data.error || '답변 생성 실패'}</span></div>`;
-                    }
-                } catch(err) {
-                    document.getElementById('chatbot-loading').remove();
-                    chatbotMessages.innerHTML += `<div style='margin-bottom:10px;text-align:left;'><span style='display:inline-block;background:#ffe0e0;color:#c0392b;padding:8px 14px;border-radius:16px 16px 16px 4px;max-width:80%;word-break:break-all;'>[AI 오류] 서버 오류</span></div>`;
-                }
-                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-            };
-            </script>
         </body>
         </html>
         """

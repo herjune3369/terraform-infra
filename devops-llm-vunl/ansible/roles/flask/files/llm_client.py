@@ -472,6 +472,37 @@ class LLMClient:
             "metacognition": "전직원 대상 메타인지 교육은 보안 의식 향상과 위험 인식 능력 개발을 목표로 합니다. 교육 커리큘럼은 보안 위험 인식, 개인정보 보호 중요성, 사회공학적 공격 기법 이해, 안전한 웹 사용법 등을 포함합니다. 특히 개발팀은 안전한 코딩 방법론, 입력값 검증, SQL Injection 방지 기법 등을 심화 학습해야 합니다. 운영팀은 로그 모니터링, 이상 징후 감지, 사고 대응 절차 등을 교육받아야 합니다. 일반 직원들은 피싱 메일 식별, 안전한 비밀번호 관리, 개인정보 보호 수칙 등을 학습합니다. 이 교육을 통해 조직 전체의 보안 문화를 조성하고, 각 직원이 보안의 첫 번째 방어선 역할을 할 수 있도록 합니다. 또한 정기적인 보안 인식 조사를 실시하여 교육 효과를 측정하고, 필요시 교육 내용을 개선해야 합니다."
         }]
 
+    def generate_response(self, prompt: str) -> str:
+        """텍스트 기반 LLM 응답 생성"""
+        try:
+            payload = {
+                "contents": [{
+                    "parts": [{
+                        "text": prompt
+                    }]
+                }]
+            }
+            
+            response = requests.post(self.api_url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if 'candidates' in result and len(result['candidates']) > 0:
+                    content = result['candidates'][0]['content']
+                    if 'parts' in content and len(content['parts']) > 0:
+                        return content['parts'][0]['text']
+                    else:
+                        return "응답을 처리할 수 없습니다."
+                else:
+                    return "응답이 비어있습니다."
+            else:
+                print(f"LLM API 호출 실패: {response.status_code} - {response.text}")
+                return f"API 호출 실패: {response.status_code}"
+                
+        except Exception as e:
+            print(f"LLM 응답 생성 중 오류: {str(e)}")
+            return f"오류가 발생했습니다: {str(e)}"
+
     def test_connection(self) -> bool:
         """API 연결 테스트"""
         try:

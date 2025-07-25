@@ -342,16 +342,35 @@ def get_final_report(report_id):
 
 @app.route('/api/chat', methods=['POST'])
 def chat_with_report():
-    """챗봇: 테스트용 엔드포인트 (1단계)"""
+    """챗봇: 보고서 내용 불러오기 (2단계)"""
     try:
         data = request.get_json()
         report_id = data.get('report_id')
         message = data.get('message')
         
-        # 간단한 테스트 응답
+        if not report_id or not message:
+            return jsonify({'error': 'report_id와 message가 필요합니다.'}), 400
+        
+        # 보고서 내용 불러오기
+        report_items = get_report(report_id)
+        if not report_items:
+            return jsonify({'error': '해당 report_id의 보고서를 찾을 수 없습니다.'}), 404
+        
+        # 보고서 요약 정보 생성
+        vulnerabilities = report_items.get('vulnerabilities', [])
+        website_url = report_items.get('website_url', '')
+        image_filename = report_items.get('image_filename', '')
+        
+        # 간단한 요약
+        summary = f"웹사이트: {website_url}\n이미지: {image_filename}\n취약점 수: {len(vulnerabilities)}\n"
+        if vulnerabilities:
+            summary += '\n'.join([f"- {v.get('type','')}" for v in vulnerabilities])
+        
         return jsonify({
-            'answer': f'테스트 성공! report_id: {report_id}, message: {message}',
-            'status': 'test_success'
+            'answer': f'보고서 내용을 성공적으로 불러왔습니다!\n\n{summary}',
+            'status': 'report_loaded',
+            'report_summary': summary,
+            'vulnerability_count': len(vulnerabilities)
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

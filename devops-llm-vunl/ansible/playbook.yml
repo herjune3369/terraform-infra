@@ -76,3 +76,48 @@
     - name: Display API test result
       debug:
         var: api_test
+
+- name: Debug Flask app status on EC2 instances
+  hosts: aws_ec2
+  become: true
+  tasks:
+    - name: Check Flask service status
+      systemd:
+        name: flask-app
+      register: flask_service_status
+
+    - name: Display Flask service status
+      debug:
+        var: flask_service_status
+
+    - name: Check Flask app logs
+      shell: journalctl -u flask-app -n 20 --no-pager
+      register: flask_logs
+      ignore_errors: true
+
+    - name: Display Flask logs
+      debug:
+        var: flask_logs.stdout_lines
+
+    - name: Check if port 5000 is listening
+      shell: netstat -tlnp | grep :5000 || ss -tlnp | grep :5000
+      register: port_check
+      ignore_errors: true
+
+    - name: Display port check result
+      debug:
+        var: port_check.stdout_lines
+
+    - name: Test Flask app locally on EC2
+      uri:
+        url: "http://localhost:5000/"
+        method: GET
+        return_content: yes
+        status_code: [200, 404, 500]
+        timeout: 30
+      register: local_test
+      ignore_errors: true
+
+    - name: Display local test result
+      debug:
+        var: local_test

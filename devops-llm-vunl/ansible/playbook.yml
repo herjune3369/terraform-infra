@@ -30,7 +30,6 @@
     - name: Wait for ALB to be ready
       pause:
         seconds: 30
-      description: "ALB가 완전히 준비될 때까지 대기"
 
     - name: Check ALB health
       uri:

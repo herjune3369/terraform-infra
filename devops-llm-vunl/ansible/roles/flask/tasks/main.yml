@@ -30,12 +30,6 @@
       requests
       pymysql
       python-dotenv
-      werkzeug
-      jinja2
-      markupsafe
-      itsdangerous
-      click
-      blinker
     owner: ubuntu
     group: ubuntu
     mode: '0644'
@@ -155,71 +149,22 @@
   shell: "pkill -f app.py"
   ignore_errors: true
 
-- name: Create systemd service file for Flask
-  copy:
-    dest: /etc/systemd/system/flask-app.service
-    content: |
-      [Unit]
-      Description=Flask Application
-      After=network.target
-
-      [Service]
-      Type=simple
-      User=ubuntu
-      Group=ubuntu
-      WorkingDirectory=/home/ubuntu/myapp
-      Environment=PATH=/home/ubuntu/myapp/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      Environment=FLASK_APP=app.py
-      Environment=FLASK_ENV=production
-      Environment=FLASK_DEBUG=0
-      Environment=RDS_HOST={{ rds_endpoint }}
-      Environment=RDS_USER=admin
-      Environment=RDS_PASSWORD={{ db_password }}
-      Environment=RDS_DATABASE=flask_app
-      Environment=GEMINI_API_KEY={{ gemini_api_key | default('your-gemini-api-key-here') }}
-      Environment=UPLOAD_FOLDER=uploads
-      Environment=MAX_CONTENT_LENGTH=16777216
-      ExecStart=/home/ubuntu/myapp/venv/bin/python app.py
-      Restart=always
-      RestartSec=10
-      StandardOutput=journal
-      StandardError=journal
-
-      [Install]
-      WantedBy=multi-user.target
-    owner: root
-    group: root
-    mode: '0644'
+- name: Start Flask app with nohup
+  shell: |
+    cd /home/ubuntu/myapp
+    source venv/bin/activate
+    nohup python app.py > flask.log 2>&1 &
+  args:
+    executable: /bin/bash
   become: true
+  ignore_errors: true
 
-- name: Reload systemd daemon
-  systemd:
-    daemon_reload: yes
-  become: true
-
-- name: Enable and start Flask service
-  systemd:
-    name: flask-app
-    state: started
-    enabled: yes
-  become: true
-
-- name: Wait a moment for service to start
+- name: Wait a moment for Flask to start
   pause:
     seconds: 5
 
-- name: Check Flask service status immediately
-  systemd:
-    name: flask-app
-  register: flask_service_status
-  become: true
-
-- name: Display Flask service status
-  debug:
-    var: flask_service_status
-
 - name: Check Flask app logs immediately
-  shell: journalctl -u flask-app -n 30 --no-pager
+  shell: tail -30 /home/ubuntu/myapp/flask.log
   register: flask_logs_immediate
   become: true
   ignore_errors: true
@@ -248,50 +193,17 @@
   debug:
     var: port_check.stdout_lines
 
-- name: Check Flask app file permissions
-  shell: ls -la /home/ubuntu/myapp/
-  register: file_permissions
-  become: true
-  ignore_errors: true
-
-- name: Display file permissions
-  debug:
-    var: file_permissions.stdout_lines
-
-- name: Check Python virtual environment
-  shell: /home/ubuntu/myapp/venv/bin/python --version
-  register: python_version
-  become: true
-  ignore_errors: true
-
-- name: Display Python version
-  debug:
-    var: python_version
-
-- name: Test Flask app manually
-  shell: |
-    cd /home/ubuntu/myapp
-    source venv/bin/activate
-    python -c "import app; print('Flask app import successful')"
-  register: flask_import_test
-  become: true
-  ignore_errors: true
-
-- name: Display Flask import test result
-  debug:
-    var: flask_import_test
-
-- name: Wait for Flask service to start
+- name: Wait for Flask app to start
   wait_for:
     port: 5000
-    host: "0.0.0.0"
+    host: "{{ ansible_default_ipv4.address }}"
     delay: 10
     timeout: 60
   become: true
   ignore_errors: true
 
-- name: Check Flask app logs after wait
-  shell: journalctl -u flask-app -n 20 --no-pager
+- name: Check Flask app logs
+  shell: tail -20 /home/ubuntu/myapp/flask.log
   register: flask_logs
   become: true
   ignore_errors: true
@@ -299,17 +211,3 @@
 - name: Display Flask logs
   debug:
     var: flask_logs.stdout_lines
-
-- name: Test Flask app locally
-  uri:
-    url: "http://localhost:5000/"
-    method: GET
-    return_content: yes
-    status_code: [200, 404, 500]
-  register: local_test
-  become: true
-  ignore_errors: true
-
-- name: Display local test result
-  debug:
-    var: local_test

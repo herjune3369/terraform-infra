@@ -27,97 +27,17 @@
   vars:
     alb_dns_name: "{{ terraform_outputs.alb_dns_name.value }}"
   tasks:
-    - name: Wait for ALB to be ready
-      pause:
-        seconds: 30
-
-    - name: Check ALB health
-      uri:
-        url: "http://{{ terraform_outputs.alb_dns_name.value }}/"
-        method: GET
-        return_content: yes
-        status_code: [200, 404, 502, 503]
-        timeout: 30
-      register: alb_health_check
-      retries: 3
-      delay: 10
-      until: alb_health_check.status is defined
-
-    - name: Display ALB health check result
-      debug:
-        var: alb_health_check
-
     - name: Wait for Flask app to respond via ALB
       uri:
         url: "http://{{ terraform_outputs.alb_dns_name.value }}/"
         method: GET
         return_content: yes
         status_code: 200
-        timeout: 30
       register: alb_response
-      retries: 15
-      delay: 10
+      retries: 10
+      delay: 5
       until: alb_response.status == 200
 
     - name: Show ALB response
       debug:
         var: alb_response.content
-
-    - name: Test API endpoints
-      uri:
-        url: "http://{{ terraform_outputs.alb_dns_name.value }}/api/vuln/reports"
-        method: GET
-        return_content: yes
-        status_code: [200, 404, 500]
-        timeout: 30
-      register: api_test
-      ignore_errors: true
-
-    - name: Display API test result
-      debug:
-        var: api_test
-
-- name: Debug Flask app status on EC2 instances
-  hosts: aws_ec2
-  become: true
-  tasks:
-    - name: Check Flask service status
-      systemd:
-        name: flask-app
-      register: flask_service_status
-
-    - name: Display Flask service status
-      debug:
-        var: flask_service_status
-
-    - name: Check Flask app logs
-      shell: journalctl -u flask-app -n 20 --no-pager
-      register: flask_logs
-      ignore_errors: true
-
-    - name: Display Flask logs
-      debug:
-        var: flask_logs.stdout_lines
-
-    - name: Check if port 5000 is listening
-      shell: netstat -tlnp | grep :5000 || ss -tlnp | grep :5000
-      register: port_check
-      ignore_errors: true
-
-    - name: Display port check result
-      debug:
-        var: port_check.stdout_lines
-
-    - name: Test Flask app locally on EC2
-      uri:
-        url: "http://localhost:5000/"
-        method: GET
-        return_content: yes
-        status_code: [200, 404, 500]
-        timeout: 30
-      register: local_test
-      ignore_errors: true
-
-    - name: Display local test result
-      debug:
-        var: local_test

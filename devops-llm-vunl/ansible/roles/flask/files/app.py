@@ -704,7 +704,14 @@ def view_report(report_id):
             </div>
 
             <!-- 🟡 플로팅 챗봇 버튼 및 챗봇 창 -->
-            <button id="chatbot-fab" style="position:fixed;bottom:32px;right:32px;z-index:9999;width:64px;height:64px;border-radius:50%;background:#667eea;color:white;font-size:2em;box-shadow:0 4px 16px rgba(0,0,0,0.2);border:none;cursor:pointer;transition:background 0.2s;">💬</button>
+            <button id="chatbot-fab" style="position:fixed;bottom:32px;right:32px;z-index:9999;width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);color:white;font-size:2.5em;box-shadow:0 8px 24px rgba(231,76,60,0.4);border:none;cursor:pointer;transition:all 0.3s;animation:pulse 2s infinite;">🤖</button>
+            <style>
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+            </style>
             <div id="chatbot-window" style="display:none;position:fixed;bottom:110px;right:32px;width:350px;max-width:90vw;height:500px;z-index:10000;background:white;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.25);border:1.5px solid #667eea;overflow:hidden;flex-direction:column;">
                 <div style="background:linear-gradient(90deg,#667eea 0%,#764ba2 100%);color:white;padding:16px 20px;font-weight:bold;font-size:1.1em;display:flex;align-items:center;justify-content:space-between;">
                     <span>AI 챗봇에게 질문하기</span>

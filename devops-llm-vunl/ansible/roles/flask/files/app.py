@@ -455,13 +455,22 @@ def vuln_analyze():
         if not website_url:
             return jsonify({"error": "웹사이트 주소를 입력해주세요"}), 400
         
+        # 환경변수 체크
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key or gemini_api_key == "your-gemini-api-key-here":
+            return jsonify({"error": "GEMINI_API_KEY가 설정되지 않았습니다. 환경변수를 확인해주세요."}), 500
+        
         # 새로운 VulnService를 사용하여 보고서 생성
         report_id = create_report(file, website_url)
         
         return jsonify({"reportId": report_id}), 200
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"❌ 분석 오류: {str(e)}")
+        print(f"📋 상세 오류: {error_trace}")
+        return jsonify({"error": f"분석 중 오류가 발생했습니다: {str(e)}"}), 500
 
 @app.route('/api/vuln/report/<report_id>', methods=['GET'])
 def get_vuln_report(report_id):
@@ -1043,12 +1052,164 @@ def view_report(report_id):
                 
                 <div class="section-divider"></div>
                 
+                <!-- AI 보안 챗봇 섹션 -->
+                <div style="margin: 40px 0; padding: 30px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 15px; border: 2px solid #3498db;">
+                    <h2 style="color: #2c3e50; text-align: center; margin-bottom: 30px;">🤖 AI 보안 챗봇</h2>
+                    <p style="text-align: center; color: #7f8c8d; margin-bottom: 25px;">이 보고서에 대해 궁금한 점이 있으시면 AI 챗봇과 대화해보세요!</p>
+                    
+                    <div id="chatbotContainer" style="display: block;">
+                        <div id="chatMessages" style="height: 300px; border: 1px solid #ddd; padding: 15px; overflow-y: auto; background-color: white; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="text-align: center; color: #7f8c8d;">챗봇과 대화를 시작하세요! 👋</div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <input type="text" id="chatInput" placeholder="질문을 입력하세요..." style="flex: 1; padding: 10px; border: 2px solid #3498db; border-radius: 4px; font-size: 14px;">
+                            <button onclick="sendMessage()" style="background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">전송</button>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                            <button onclick="quickAnalysis()" style="background-color: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">🔍 빠른 분석</button>
+                            <button onclick="getSecurityTips()" style="background-color: #f39c12; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">💡 보안 팁</button>
+                            <button onclick="clearChat()" style="background-color: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 대화 초기화</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-divider"></div>
+                
                 {html_content}
                 
                 <div class="back-link">
                     <a href="/">← 메인으로 돌아가기</a>
                 </div>
             </div>
+            
+            <script>
+                // 챗봇 관련 변수
+                let currentReportId = '{report_id}';
+                let chatHistory = [];
+                
+                // 메시지 전송
+                async function sendMessage() {
+                    const chatInput = document.getElementById('chatInput');
+                    const message = chatInput.value.trim();
+                    
+                    if (!message) return;
+                    
+                    // 사용자 메시지 추가
+                    addMessage('user', message);
+                    chatInput.value = '';
+                    
+                    try {
+                        const response = await fetch('/api/chat', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                report_id: currentReportId,
+                                message: message,
+                                chat_history: chatHistory
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            addMessage('bot', data.answer);
+                            chatHistory.push({user: message, bot: data.answer});
+                        } else {
+                            addMessage('bot', `❌ 오류: ${data.error}`);
+                        }
+                    } catch (error) {
+                        addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
+                    }
+                }
+                
+                // 메시지 추가
+                function addMessage(sender, message) {
+                    const chatMessages = document.getElementById('chatMessages');
+                    const messageDiv = document.createElement('div');
+                    messageDiv.style.marginBottom = '10px';
+                    messageDiv.style.padding = '8px 12px';
+                    messageDiv.style.borderRadius = '8px';
+                    messageDiv.style.maxWidth = '80%';
+                    
+                    if (sender === 'user') {
+                        messageDiv.style.backgroundColor = '#3498db';
+                        messageDiv.style.color = 'white';
+                        messageDiv.style.marginLeft = 'auto';
+                        messageDiv.textContent = message;
+                    } else {
+                        messageDiv.style.backgroundColor = '#ecf0f1';
+                        messageDiv.style.color = '#2c3e50';
+                        messageDiv.style.marginRight = 'auto';
+                        messageDiv.innerHTML = message.replace(/\\n/g, '<br>');
+                    }
+                    
+                    chatMessages.appendChild(messageDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+                
+                // 빠른 분석
+                async function quickAnalysis() {
+                    try {
+                        const response = await fetch('/api/chat/quick-analysis', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                report_id: currentReportId
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            addMessage('bot', data.analysis);
+                        } else {
+                            addMessage('bot', `❌ 오류: ${data.error}`);
+                        }
+                    } catch (error) {
+                        addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
+                    }
+                }
+                
+                // 보안 팁 가져오기
+                async function getSecurityTips() {
+                    try {
+                        const response = await fetch('/api/chat/security-tips');
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            let tipsMessage = '💡 **보안 팁 모음**\\n\\n';
+                            data.tips.forEach((tip, index) => {
+                                tipsMessage += `${index + 1}. **${tip.category}**: ${tip.tip}\\n   ${tip.description}\\n\\n`;
+                            });
+                            addMessage('bot', tipsMessage);
+                        } else {
+                            addMessage('bot', `❌ 오류: ${data.error}`);
+                        }
+                    } catch (error) {
+                        addMessage('bot', `❌ 네트워크 오류: ${error.message}`);
+                    }
+                }
+                
+                // 대화 초기화
+                function clearChat() {
+                    const chatMessages = document.getElementById('chatMessages');
+                    chatMessages.innerHTML = '<div style="text-align: center; color: #7f8c8d;">챗봇과 대화를 시작하세요! 👋</div>';
+                    chatHistory = [];
+                }
+                
+                // Enter 키로 메시지 전송
+                document.getElementById('chatInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        sendMessage();
+                    }
+                });
+            </script>
         </body>
         </html>
         """

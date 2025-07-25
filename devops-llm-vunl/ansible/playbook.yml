@@ -27,17 +27,53 @@
   vars:
     alb_dns_name: "{{ terraform_outputs.alb_dns_name.value }}"
   tasks:
+    - name: Wait for ALB to be ready
+      pause:
+        seconds: 30
+      description: "ALB가 완전히 준비될 때까지 대기"
+
+    - name: Check ALB health
+      uri:
+        url: "http://{{ terraform_outputs.alb_dns_name.value }}/"
+        method: GET
+        return_content: yes
+        status_code: [200, 404, 502, 503]
+        timeout: 30
+      register: alb_health_check
+      retries: 3
+      delay: 10
+      until: alb_health_check.status is defined
+
+    - name: Display ALB health check result
+      debug:
+        var: alb_health_check
+
     - name: Wait for Flask app to respond via ALB
       uri:
         url: "http://{{ terraform_outputs.alb_dns_name.value }}/"
         method: GET
         return_content: yes
         status_code: 200
+        timeout: 30
       register: alb_response
-      retries: 10
-      delay: 5
+      retries: 15
+      delay: 10
       until: alb_response.status == 200
 
     - name: Show ALB response
       debug:
         var: alb_response.content
+
+    - name: Test API endpoints
+      uri:
+        url: "http://{{ terraform_outputs.alb_dns_name.value }}/api/vuln/reports"
+        method: GET
+        return_content: yes
+        status_code: [200, 404, 500]
+        timeout: 30
+      register: api_test
+      ignore_errors: true
+
+    - name: Display API test result
+      debug:
+        var: api_test

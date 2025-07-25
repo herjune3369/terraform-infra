@@ -149,39 +149,69 @@
   shell: "pkill -f app.py"
   ignore_errors: true
 
-- name: Start Flask app with nohup
-  shell: |
-    cd /home/ubuntu/myapp
-    source venv/bin/activate
-    nohup python app.py > flask.log 2>&1 &
-  args:
-    executable: /bin/bash
+- name: Create systemd service file for Flask
+  copy:
+    dest: /etc/systemd/system/flask-app.service
+    content: |
+      [Unit]
+      Description=Flask Application
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=ubuntu
+      WorkingDirectory=/home/ubuntu/myapp
+      Environment=PATH=/home/ubuntu/myapp/venv/bin
+      ExecStart=/home/ubuntu/myapp/venv/bin/python app.py
+      Restart=always
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root
+    group: root
+    mode: '0644'
   become: true
-  ignore_errors: true
 
-- name: Wait a moment for Flask to start
-  pause:
-    seconds: 5
-
-- name: Check Flask app logs immediately
-  shell: tail -30 /home/ubuntu/myapp/flask.log
-  register: flask_logs_immediate
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
   become: true
-  ignore_errors: true
 
-- name: Display immediate Flask logs
+- name: Enable and start Flask service
+  systemd:
+    name: flask-app
+    state: started
+    enabled: yes
+  become: true
+
+- name: Wait for Flask service to start
+  wait_for:
+    port: 5000
+    host: "0.0.0.0"
+    delay: 10
+    timeout: 60
+  become: true
+
+- name: Check Flask service status
+  systemd:
+    name: flask-app
+  register: flask_service_status
+  become: true
+
+- name: Display Flask service status
   debug:
-    var: flask_logs_immediate.stdout_lines
+    var: flask_service_status
 
-- name: Check if Flask process is running
-  shell: ps aux | grep app.py | grep -v grep
-  register: flask_process
+- name: Check Flask app logs
+  shell: journalctl -u flask-app -n 20 --no-pager
+  register: flask_logs
   become: true
   ignore_errors: true
 
-- name: Display Flask process status
+- name: Display Flask logs
   debug:
-    var: flask_process.stdout_lines
+    var: flask_logs.stdout_lines
 
 - name: Check if port 5000 is listening
   shell: netstat -tlnp | grep :5000 || ss -tlnp | grep :5000
@@ -193,21 +223,16 @@
   debug:
     var: port_check.stdout_lines
 
-- name: Wait for Flask app to start
-  wait_for:
-    port: 5000
-    host: "{{ ansible_default_ipv4.address }}"
-    delay: 10
-    timeout: 60
+- name: Test Flask app locally
+  uri:
+    url: "http://localhost:5000/"
+    method: GET
+    return_content: yes
+    status_code: [200, 404, 500]
+  register: local_test
   become: true
   ignore_errors: true
 
-- name: Check Flask app logs
-  shell: tail -20 /home/ubuntu/myapp/flask.log
-  register: flask_logs
-  become: true
-  ignore_errors: true
-
-- name: Display Flask logs
+- name: Display local test result
   debug:
-    var: flask_logs.stdout_lines
+    var: local_test

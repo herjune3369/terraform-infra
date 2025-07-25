@@ -30,6 +30,12 @@
       requests
       pymysql
       python-dotenv
+      werkzeug
+      jinja2
+      markupsafe
+      itsdangerous
+      click
+      blinker
     owner: ubuntu
     group: ubuntu
     mode: '0644'

@@ -1075,7 +1075,7 @@ if __name__ == '__main__':
         print(f"   - 사용자: {os.getenv('RDS_USER', 'N/A')}")
         print(f"🔑 API 키 상태: {'설정됨' if os.getenv('GEMINI_API_KEY') and os.getenv('GEMINI_API_KEY') != 'your-gemini-api-key-here' else '설정되지 않음'}")
         
-        # 데이터베이스 연결 테스트
+        # 데이터베이스 연결 테스트 (실패해도 앱은 시작)
         try:
             import pymysql
             connection = pymysql.connect(
@@ -1083,16 +1083,23 @@ if __name__ == '__main__':
                 user=os.getenv('RDS_USER'),
                 password=os.getenv('RDS_PASSWORD'),
                 database=os.getenv('RDS_DATABASE'),
-                port=3306
+                port=3306,
+                connect_timeout=10
             )
             connection.close()
             print("✅ 데이터베이스 연결 성공")
         except Exception as db_error:
-            print(f"❌ 데이터베이스 연결 실패: {db_error}")
+            print(f"⚠️ 데이터베이스 연결 실패 (앱은 계속 시작): {db_error}")
+            print("📝 데이터베이스 없이도 기본 기능은 사용 가능합니다.")
         
         print("🌐 Flask 서버 시작...")
-        app.run(host='0.0.0.0', port=5000, debug=False)
+        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
     except Exception as e:
         print(f"❌ Flask 애플리케이션 시작 실패: {e}")
         import traceback
         traceback.print_exc()
+        # 시스템 종료 대신 계속 실행
+        print("🔄 앱을 다시 시작합니다...")
+        import time
+        time.sleep(5)
+        # 재시작 로직은 systemd가 처리

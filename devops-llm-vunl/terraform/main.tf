@@ -297,7 +297,7 @@ resource "aws_lb_target_group" "app_tg" {
     unhealthy_threshold = 5
     timeout             = 10
     interval            = 60
-    matcher             = "200,404,502,503"
+    matcher             = "200,404"
   }
 
   tags = {

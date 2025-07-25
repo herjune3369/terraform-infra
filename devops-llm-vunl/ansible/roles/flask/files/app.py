@@ -83,8 +83,6 @@ HTML_FORM = """
             <div id="reportsList">로딩 중...</div>
         </div>
 
-
-
         <div class="api-info">
             <h3>🔧 API 정보</h3>
             <p><strong>POST /api/vuln/analyze</strong> - 이미지 업로드 및 분석</p>
@@ -264,11 +262,7 @@ def vuln_analyze():
         return jsonify({"reportId": report_id}), 200
         
     except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        print(f"❌ 분석 오류: {str(e)}")
-        print(f"📋 상세 오류: {error_trace}")
-        return jsonify({"error": f"분석 중 오류가 발생했습니다: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/vuln/report/<report_id>', methods=['GET'])
 def get_vuln_report(report_id):
